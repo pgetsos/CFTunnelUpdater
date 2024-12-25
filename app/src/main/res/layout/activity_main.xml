@@ -114,8 +114,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="0.7"
                 android:layout_marginStart="16dp"
-                android:layout_marginEnd="16dp"
-                android:hint="Optional" />
+                android:layout_marginEnd="16dp" />
         </LinearLayout>
 
         <Button
@@ -124,7 +123,17 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:textSize="18sp"
-            android:text="Update"
+            android:text="Add IP to CF"
+            android:textAllCaps="false"
+            android:layout_gravity="end"/>
+
+        <Button
+            android:id="@+id/ip_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:textSize="18sp"
+            android:text="Update IP"
             android:textAllCaps="false"
             android:layout_gravity="end"/>
 

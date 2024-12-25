@@ -3,6 +3,7 @@ package gr.pgetsos.cftunnelupdater;
 import com.google.gson.annotations.SerializedName;
 
 import java.util.List;
+import java.util.Objects;
 
 public class AccessGroupResponse {
 
@@ -47,6 +48,24 @@ public class AccessGroupResponse {
     public static class IncludeItem {
         @SerializedName("ip")
         public Ip ip;
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+
+            IncludeItem that = (IncludeItem) o;
+            return ip.ip.equals(that.ip.ip);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hashCode(ip);
+        }
     }
 
     public static class Ip {

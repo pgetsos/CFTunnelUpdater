@@ -20,6 +20,8 @@ import com.google.gson.Gson;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -38,6 +40,7 @@ public class MainActivity extends AppCompatActivity {
     private String groupID;
     private String apiToken;
     private String ipAddr;
+    private EditText ipEditText;
 
 
     @Override
@@ -51,11 +54,14 @@ public class MainActivity extends AppCompatActivity {
             return insets;
         });
         Button button = findViewById(R.id.save_button);
+        Button ipButton = findViewById(R.id.ip_button);
 
         SharedPreferences sharedPreferences = getSharedPreferences("MyPrefs", Context.MODE_PRIVATE);
         accountID = sharedPreferences.getString("accountID", "");
         groupID = sharedPreferences.getString("groupID", "");
         apiToken = sharedPreferences.getString("apiToken", "");
+
+        ipEditText = findViewById(R.id.ip_et);
 
         ((EditText) findViewById(R.id.account_et)).setText(accountID);
         ((EditText) findViewById(R.id.group_et)).setText(groupID);
@@ -65,7 +71,17 @@ public class MainActivity extends AppCompatActivity {
             accountID = ((EditText) findViewById(R.id.account_et)).getText().toString();
             groupID = ((EditText) findViewById(R.id.group_et)).getText().toString();
             apiToken = ((EditText) findViewById(R.id.api_et)).getText().toString();
-            ipAddr = ((EditText) findViewById(R.id.ip_et)).getText().toString();
+            ipAddr = ipEditText.getText().toString();
+
+            if(ipAddr.isBlank()) {
+                Toast.makeText(MainActivity.this, "Please enter an IP address", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            if(accountID.isBlank() || groupID.isBlank() || apiToken.isBlank()) {
+                Toast.makeText(MainActivity.this, "Please enter credentials", Toast.LENGTH_SHORT).show();
+                return;
+            }
 
             SharedPreferences.Editor editor = sharedPreferences.edit();
             editor.putString("accountID", accountID);
@@ -75,6 +91,9 @@ public class MainActivity extends AppCompatActivity {
 
             getCurrentGroup();
         });
+
+        ipButton.setOnClickListener(view-> getPublicIP());
+
         getPublicIP();
     }
 
@@ -115,13 +134,17 @@ public class MainActivity extends AppCompatActivity {
         AccessGroupResponse response = gson.fromJson(jsonString, AccessGroupResponse.class);
         AccessGroupResponse.IncludeItem ii = new AccessGroupResponse.IncludeItem();
         AccessGroupResponse.Ip newIp = new AccessGroupResponse.Ip();
-        if (ipAddr.isBlank()) {
-            newIp.ip = publicIp.get() + "/32";
-        } else {
-            newIp.ip = ipAddr + "/32";
-        }
+        newIp.ip = ipAddr + "/32";
         ii.ip = newIp;
         response.result.include.add(ii);
+        List<AccessGroupResponse.IncludeItem> newList = new ArrayList<>();
+        for (AccessGroupResponse.IncludeItem element : response.result.include) {
+            if (!newList.contains(element)) {
+                newList.add(element);
+            }
+        }
+        response.result.include = newList;
+
         return gson.toJson(response);
     }
 
@@ -167,13 +190,15 @@ public class MainActivity extends AppCompatActivity {
     private void getPublicIP() {
         Thread thread = new Thread(() -> {
             try {
-                URL url = new URL("https://api.ipify.org");
+                URL url = new URL("https://api64.ipify.org");
                 HttpURLConnection connection = (HttpURLConnection) url.openConnection();
                 connection.setRequestProperty("User-Agent", "Mozilla/5.0"); // Set a User-Agent to avoid HTTP 403 Forbidden error
 
                 try (Scanner s = new Scanner(connection.getInputStream(), "UTF-8").useDelimiter("\\A")) {
                     publicIp.set(s.next());
                 }
+
+                runOnUiThread(() -> ipEditText.setText(publicIp.get()));
 
                 connection.disconnect();
             } catch (Exception e) {
