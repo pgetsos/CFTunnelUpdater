@@ -19,7 +19,11 @@ import com.google.gson.Gson;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
+import java.net.Inet4Address;
+import java.net.Inet6Address;
+import java.net.InetAddress;
 import java.net.URL;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
@@ -134,7 +138,18 @@ public class MainActivity extends AppCompatActivity {
         AccessGroupResponse response = gson.fromJson(jsonString, AccessGroupResponse.class);
         AccessGroupResponse.IncludeItem ii = new AccessGroupResponse.IncludeItem();
         AccessGroupResponse.Ip newIp = new AccessGroupResponse.Ip();
-        newIp.ip = ipAddr + "/32";
+		InetAddress address = null;
+		try {
+			address = InetAddress.getByName(ipAddr);
+		} catch (UnknownHostException e) {
+			runOnUiThread(() -> Toast.makeText(MainActivity.this, "Invalid IP address", Toast.LENGTH_SHORT).show());
+            return null;
+		}
+		if (address instanceof Inet6Address) {
+            newIp.ip = ipAddr + "/64";
+        } else if (address instanceof Inet4Address) {
+            newIp.ip = ipAddr + "/32";
+        }
         ii.ip = newIp;
         response.result.include.add(ii);
         List<AccessGroupResponse.IncludeItem> newList = new ArrayList<>();
@@ -149,6 +164,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updateAccessGroup(String jsonString) {
+        if (jsonString == null) {
+            return;
+        }
+
         String bodyJson = "{"+jsonString.substring(jsonString.indexOf("\"include\""));
         bodyJson = bodyJson.substring(0, bodyJson.indexOf("]")+1)+"}";
 
