@@ -7,136 +7,23 @@
     android:layout_height="match_parent"
     tools:context="gr.pgetsos.cftunnelupdater.MainActivity">
 
-    <LinearLayout
-        android:layout_width="match_parent"
+    <FrameLayout
+        android:id="@+id/container"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toTopOf="@+id/bottom_nav"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottom_nav"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:paddingHorizontal="16dp"
-        android:paddingVertical="16dp"
-        app:layout_constraintTop_toTopOf="parent">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="0.2"
-                android:gravity="center_vertical"
-                android:text="Account ID"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                app:autoSizeTextType="uniform"
-                android:maxLines="1"/>
-
-            <EditText
-                android:id="@+id/account_et"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="0.7"
-                android:layout_marginStart="16dp"
-                android:layout_marginEnd="16dp" />
-
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="0.2"
-                android:gravity="center_vertical"
-                android:text="Group ID"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                app:autoSizeTextType="uniform"
-                android:maxLines="1"/>
-
-            <EditText
-                android:id="@+id/group_et"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="0.7"
-                android:layout_marginStart="16dp"
-                android:layout_marginEnd="16dp" />
-
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="0.2"
-                android:gravity="center_vertical"
-                android:text="API Token"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                app:autoSizeTextType="uniform"
-                android:maxLines="1"/>
-
-            <EditText
-                android:id="@+id/api_et"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="0.7"
-                android:layout_marginStart="16dp"
-                android:layout_marginEnd="16dp" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="0.2"
-                android:gravity="center_vertical"
-                android:text="IP"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                app:autoSizeTextType="uniform"
-                android:maxLines="1"/>
-
-            <EditText
-                android:id="@+id/ip_et"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="0.7"
-                android:layout_marginStart="16dp"
-                android:layout_marginEnd="16dp" />
-        </LinearLayout>
-
-        <Button
-            android:id="@+id/save_button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:textSize="18sp"
-            android:text="Add IP to CF"
-            android:textAllCaps="false"
-            android:layout_gravity="end"/>
-
-        <Button
-            android:id="@+id/ip_button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:textSize="18sp"
-            android:text="Update IP"
-            android:textAllCaps="false"
-            android:layout_gravity="end"/>
-
-    </LinearLayout>
+        android:layout_gravity="bottom"
+        app:menu="@menu/bottom_nav_menu"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

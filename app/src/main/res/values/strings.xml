@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">CFTunnelUpdater</string>
+    <string name="no_ips_present">No IPs present</string>
 </resources>

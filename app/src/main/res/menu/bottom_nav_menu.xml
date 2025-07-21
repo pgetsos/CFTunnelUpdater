@@ -1,0 +1,10 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_add_ip"
+        android:title="Add IP"
+        android:icon="@android:drawable/ic_input_add" />
+    <item
+        android:id="@+id/nav_list_ips"
+        android:title="List IPs"
+        android:icon="@android:drawable/ic_menu_agenda" />
+</menu>

@@ -1,0 +1,8 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/menu_add_ip"
+        android:title="Add IP" />
+    <item
+        android:id="@+id/menu_list_ips"
+        android:title="List IPs" />
+</menu>

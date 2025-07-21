@@ -31,11 +31,12 @@ Clicking "Add IP to CF" should add the IP to your Group, and give it access to y
 # Roadmap
 In no particular order, these are things I want to implement someday
 - [ ] Create release (and automate it, maybe)
-- [ ] List with all IPs right now in the Group
+- [x] List with all IPs right now in the Group
 - [ ] A name for each IP added through the app
-- [ ] Deletion of IPs from the app
+- [x] Deletion of IPs from the app
 - [ ] Expiry date/time for each IP (needs you to re-open the app after that date/time)
 - [ ] Date added of each IP
 - [ ] App icon
 - [ ] Setup instructions inside the app
 - [ ] Publish on F-Droid/Play Store
+- [ ] Auto-adding the current phone IP to the list
