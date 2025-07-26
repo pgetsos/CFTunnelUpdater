@@ -1,4 +1,6 @@
 <resources>
     <string name="app_name">CFTunnelUpdater</string>
     <string name="no_ips_present">No IPs present</string>
+    <string name="fetching_your_current_ip">Fetching your current IP...</string>
+    <string name="set_credentials_to_check_ip_status">Set credentials to check IP status.</string>
 </resources>

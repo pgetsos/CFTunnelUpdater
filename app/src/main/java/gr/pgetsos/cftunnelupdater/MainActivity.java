@@ -1,8 +1,11 @@
 package gr.pgetsos.cftunnelupdater;
 
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.SharedPreferences;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
+import android.net.NetworkRequest;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -15,7 +18,7 @@ import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AlertDialog; // Import AlertDialog
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -23,9 +26,20 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.recyclerview.widget.DividerItemDecoration;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.work.ExistingPeriodicWorkPolicy;
+import androidx.work.NetworkType;
+import androidx.work.OneTimeWorkRequest;
+import androidx.work.PeriodicWorkRequest;
+import androidx.work.WorkManager;
+import androidx.work.Constraints;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.switchmaterial.SwitchMaterial;
+import com.google.android.material.textfield.TextInputLayout;
 import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonSyntaxException;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
@@ -35,12 +49,11 @@ import java.net.InetAddress;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Scanner;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -52,17 +65,32 @@ import okhttp3.Response;
 
 public class MainActivity extends AppCompatActivity implements OnIpLongPressListener {
 
+    private static final String IP_MONITOR_WORK_TAG = "ipMonitorWork";
+    public static final String PREF_IP_CHECKER_TYPE = "ip_checker_type";
+    public static final String PREF_CUSTOM_IP_CHECKER_URL = "custom_ip_checker_url";
+    public static final String IP_CHECKER_TYPE_IPIFY = "ipify";
+    public static final String IP_CHECKER_TYPE_CUSTOM = "custom";
+
     private AtomicReference<String> publicIp = new AtomicReference<>();
     private String accountID;
     private String groupID;
     private String apiToken;
     private String ipAddr;
+    private EditText accountEt;
+    private EditText groupEt;
+    private EditText apiEt;
     private EditText ipEditText;
     private int selectedNavItemId = R.id.nav_add_ip;
     private IPAdapter ipAdapter;
     private List<String> lastFetchedIps = new ArrayList<>();
     private TextView currentIpStatusTextView;
     private boolean hasFetchedIps = false;
+    private String IPCheckerSite = "local";
+    private SwitchMaterial useCustomIpCheckerSwitch;
+    private TextInputLayout customIpCheckerUrlTil;
+    private EditText customIpCheckerUrlEditText;
+    private String currentIpCheckerType = IP_CHECKER_TYPE_IPIFY;
+    private String currentCustomIpCheckerUrl = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -110,6 +138,37 @@ public class MainActivity extends AppCompatActivity implements OnIpLongPressList
         } else {
             showAddIpView();
         }
+
+        boolean autoUpdateEnabled = sharedPreferences.getBoolean(PublicIpMonitorWorker.PREF_AUTO_UPDATE_ENABLED, false);
+
+        if (autoUpdateEnabled) {
+            schedulePublicIpMonitor();
+        }
+    }
+
+    public void schedulePublicIpMonitor() {
+        Constraints constraints = new Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build();
+
+        PeriodicWorkRequest ipMonitorWorkRequest =
+                new PeriodicWorkRequest.Builder(PublicIpMonitorWorker.class,
+                        15, TimeUnit.MINUTES) // Minimum interval for PeriodicWork
+                        .setConstraints(constraints)
+                        .addTag(IP_MONITOR_WORK_TAG)
+                        .build();
+
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+                IP_MONITOR_WORK_TAG,
+                ExistingPeriodicWorkPolicy.KEEP,
+                ipMonitorWorkRequest);
+
+        Log.i("MainActivity", "Public IP Monitor work scheduled.");
+    }
+
+    public void cancelPublicIpMonitor() {
+        WorkManager.getInstance(this).cancelUniqueWork(IP_MONITOR_WORK_TAG);
+        Log.i("MainActivity", "Public IP Monitor work canceled.");
     }
 
     @Override
@@ -297,11 +356,16 @@ public class MainActivity extends AppCompatActivity implements OnIpLongPressList
         accountID = sharedPreferences.getString("accountID", "");
         groupID = sharedPreferences.getString("groupID", "");
         apiToken = sharedPreferences.getString("apiToken", "");
+        currentIpCheckerType = sharedPreferences.getString(PREF_IP_CHECKER_TYPE, IP_CHECKER_TYPE_IPIFY);
+        currentCustomIpCheckerUrl = sharedPreferences.getString(PREF_CUSTOM_IP_CHECKER_URL, "");
 
+        accountEt = findViewById(R.id.account_et);
+        groupEt = findViewById(R.id.group_et);
+        apiEt = findViewById(R.id.api_et);
         ipEditText = addIpView.findViewById(R.id.ip_et);
-        ((EditText) addIpView.findViewById(R.id.account_et)).setText(accountID);
-        ((EditText) addIpView.findViewById(R.id.group_et)).setText(groupID);
-        ((EditText) addIpView.findViewById(R.id.api_et)).setText(apiToken);
+        accountEt.setText(accountID);
+        groupEt.setText(groupID);
+        apiEt.setText(apiToken);
         currentIpStatusTextView = addIpView.findViewById(R.id.current_ip_status_tv);
         if (publicIp.get() == null || publicIp.get().isBlank())
             getPublicIP();
@@ -310,12 +374,37 @@ public class MainActivity extends AppCompatActivity implements OnIpLongPressList
             updateCurrentIpStatus();
         }
 
-        Button button = addIpView.findViewById(R.id.save_button);
+        useCustomIpCheckerSwitch = addIpView.findViewById(R.id.custom_ip_checker_switch);
+        customIpCheckerUrlTil = addIpView.findViewById(R.id.custom_ip_checker_url_til);
+        customIpCheckerUrlEditText = addIpView.findViewById(R.id.custom_ip_checker_url_et);
+
+
+        if (IP_CHECKER_TYPE_CUSTOM.equals(currentIpCheckerType)) {
+            useCustomIpCheckerSwitch.setChecked(true);
+            customIpCheckerUrlTil.setVisibility(View.VISIBLE);
+            customIpCheckerUrlEditText.setText(currentCustomIpCheckerUrl);
+        } else {
+            useCustomIpCheckerSwitch.setChecked(false);
+            customIpCheckerUrlTil.setVisibility(View.GONE);
+        }
+
+        useCustomIpCheckerSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isChecked) {
+                currentIpCheckerType = IP_CHECKER_TYPE_CUSTOM;
+                customIpCheckerUrlTil.setVisibility(View.VISIBLE);
+            } else {
+                currentIpCheckerType = IP_CHECKER_TYPE_IPIFY;
+                customIpCheckerUrlTil.setVisibility(View.GONE);
+            }
+        });
+
+        Button button = addIpView.findViewById(R.id.add_ip_to_cf_button);
         Button ipButton = addIpView.findViewById(R.id.ip_button);
+        Button saveSettingsButton = addIpView.findViewById(R.id.save_settings_button);
+
         button.setOnClickListener(view -> {
-            accountID = ((EditText) addIpView.findViewById(R.id.account_et)).getText().toString();
-            groupID = ((EditText) addIpView.findViewById(R.id.group_et)).getText().toString();
-            apiToken = ((EditText) addIpView.findViewById(R.id.api_et)).getText().toString();
+            saveCurrentSettings();
+
             ipAddr = ipEditText.getText().toString();
             if(ipAddr.isBlank()) {
                 Toast.makeText(MainActivity.this, "Please enter an IP address", Toast.LENGTH_SHORT).show();
@@ -325,15 +414,59 @@ public class MainActivity extends AppCompatActivity implements OnIpLongPressList
                 Toast.makeText(MainActivity.this, "Please enter Cloudflare credentials", Toast.LENGTH_SHORT).show();
                 return;
             }
-            SharedPreferences.Editor editor = sharedPreferences.edit();
+
+            getCurrentGroup();
+        });
+
+        saveSettingsButton.setOnClickListener(view -> {
+            saveCurrentSettings();
+            Toast.makeText(MainActivity.this, "Settings Saved!", Toast.LENGTH_SHORT).show();
+        });
+
+        ipButton.setOnClickListener(view -> getPublicIP());
+    }
+
+    private void saveCurrentSettings() {
+        SharedPreferences sharedPreferences = getSharedPreferences("MyPrefs", Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+
+        if(accountEt == null || groupEt == null || apiEt == null) {
+            Log.e("SaveSettings", "One or more credential EditTexts not found. Cannot save credentials.");
+        } else {
+            accountID = accountEt.getText().toString().trim();
+            groupID = groupEt.getText().toString().trim();
+            apiToken = apiEt.getText().toString().trim();
+
             editor.putString("accountID", accountID);
             editor.putString("groupID", groupID);
             editor.putString("apiToken", apiToken);
-            editor.apply();
-            getCurrentGroup();
-        });
-        ipButton.setOnClickListener(view -> getPublicIP());
+        }
+
+        if (useCustomIpCheckerSwitch != null && useCustomIpCheckerSwitch.isChecked()) {
+            currentIpCheckerType = IP_CHECKER_TYPE_CUSTOM;
+            if (customIpCheckerUrlEditText != null) {
+                currentCustomIpCheckerUrl = customIpCheckerUrlEditText.getText().toString().trim();
+                if (currentCustomIpCheckerUrl.isEmpty()) {
+                    Toast.makeText(this, "Custom URL is empty. Please provide a URL or disable custom checker.", Toast.LENGTH_LONG).show();
+                    return;
+                }
+            } else {
+                Log.w("SaveSettings", "customIpCheckerUrlEditText is null when trying to save custom URL.");
+            }
+        } else {
+            currentIpCheckerType = IP_CHECKER_TYPE_IPIFY;
+        }
+
+        editor.putString(PREF_IP_CHECKER_TYPE, currentIpCheckerType);
+        editor.putString(PREF_CUSTOM_IP_CHECKER_URL, currentCustomIpCheckerUrl);
+
+        editor.apply();
+        Log.i("SaveSettings", "Settings saved: accountID=" + accountID + ", groupID=" + groupID + ", apiToken=" + apiToken +
+                ", currentIpCheckerType=" + currentIpCheckerType + ", currentCustomIpCheckerUrl=" + currentCustomIpCheckerUrl);
+        fetchIpsOnAppStart();
+        updateCurrentIpStatus();
     }
+
 
     private void showListIpsView() {
         LayoutInflater inflater = LayoutInflater.from(this);
@@ -446,7 +579,7 @@ public class MainActivity extends AppCompatActivity implements OnIpLongPressList
         for (AccessGroupResponse.IncludeItem element : response.result.include) {
             boolean found = false;
             for(AccessGroupResponse.IncludeItem newItem : newList) {
-                if (newItem.ip != null && newItem.ip.ip != null && newItem.ip.ip.equals(element.ip.ip)) {
+                if (newItem.ip != null && newItem.ip.ip != null && isIpInNetwork(element.ip.ip, newItem.ip.ip)) {
                     found = true;
                     break;
                 }
@@ -498,7 +631,7 @@ public class MainActivity extends AppCompatActivity implements OnIpLongPressList
             public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
                 if (response.isSuccessful()) {
                     successfulUpdate();
-                    fetchIpsOnAppStart(); // After successful update, refresh the IP list to include the new IP
+                    fetchIpsOnAppStart();
                 } else {
                     String errorBody = response.body() != null ? response.body().string() : "No error body";
                     Log.e("NetworkError", "Unexpected code " + response + " - " + errorBody);
@@ -520,14 +653,37 @@ public class MainActivity extends AppCompatActivity implements OnIpLongPressList
 
     private void getPublicIP() {
         Thread thread = new Thread(() -> {
+            String urlString = "https://api64.ipify.org";
+            if (IP_CHECKER_TYPE_CUSTOM.equals(currentIpCheckerType)) {
+                urlString = currentCustomIpCheckerUrl;
+                if (urlString == null || urlString.trim().isEmpty()) {
+                    runOnUiThread(() -> Toast.makeText(MainActivity.this, "Custom IP Checker URL is not set.", Toast.LENGTH_LONG).show());
+                    return;
+                }
+            }
             try {
-                URL url = new URL("https://api64.ipify.org");
+                URL url = new URL(urlString);
                 HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-                connection.setRequestProperty("User-Agent", "Mozilla/5.0"); // Set a User-Agent to avoid HTTP 403 Forbidden error
+                connection.setRequestProperty("User-Agent", "Mozilla/5.0");
+                connection.setConnectTimeout(10000);
+                connection.setReadTimeout(10000);
 
                 try (Scanner s = new Scanner(connection.getInputStream(), "UTF-8").useDelimiter("\\A")) {
-                    publicIp.set(s.next());
+                    if (s.hasNext()) {
+                        if (IP_CHECKER_TYPE_IPIFY.equals(currentIpCheckerType)) {
+                            publicIp.set(s.next());
+                        } else {
+                            publicIp.set(readIPFromJSON(s.next()));
+                        }
+                    } else {
+                        throw new IOException("No content received from IP checker.");
+                    }
                 }
+
+                if (!isCorrectIPFormat(publicIp.get())) {
+                    return;
+                }
+
                 runOnUiThread(() -> {
                     if (ipEditText != null) {
                         ipEditText.setText(publicIp.get());
@@ -556,7 +712,7 @@ public class MainActivity extends AppCompatActivity implements OnIpLongPressList
                     .addHeader("authorization", "Bearer " + apiToken)
                     .build();
             Response response = client.newCall(request).execute();
-            if (response.isSuccessful() && response.body() != null) {
+            if (response.isSuccessful()) {
                 String body = response.body().string();
                 Gson gson = new Gson();
                 AccessGroupResponse result = gson.fromJson(body, AccessGroupResponse.class);
@@ -568,13 +724,13 @@ public class MainActivity extends AppCompatActivity implements OnIpLongPressList
                         }
                     }
                 }
-                // Sort the IPs before returning
+
                 ips.sort(new IPAddressComparator());
                 response.close();
                 hasFetchedIps = true;
                 return ips;
             } else {
-                String errorBody = response.body() != null ? response.body().string() : "N/A";
+                String errorBody = response.body().string();
                 Log.e("CloudflareFetch", "Failed to fetch IPs: " + response.code() + " " + response.message() + " - " + errorBody);
                 response.close();
                 return null; // Indicate error
@@ -641,13 +797,13 @@ public class MainActivity extends AppCompatActivity implements OnIpLongPressList
 
         String currentPublicIp = ipEditText.getText().toString(); 
 
-        if (currentPublicIp == null || currentPublicIp.isEmpty()) {
-            currentIpStatusTextView.setText("Fetching your current IP...");
+        if (currentPublicIp.isEmpty()) {
+            currentIpStatusTextView.setText(R.string.fetching_your_current_ip);
             return;
         }
 
         if (areCredentialsUnavailable()) {
-            currentIpStatusTextView.setText("Set credentials to check IP status.");
+            currentIpStatusTextView.setText(R.string.set_credentials_to_check_ip_status);
             currentIpStatusTextView.setTextColor(getResources().getColor(android.R.color.darker_gray, getTheme()));
             return;
         }
@@ -656,7 +812,7 @@ public class MainActivity extends AppCompatActivity implements OnIpLongPressList
         synchronized (lastFetchedIps) {
             if (lastFetchedIps != null && hasFetchedIps) {
                 for (String listedIp : lastFetchedIps) {
-                    if (listedIp.startsWith(currentPublicIp)) {
+                    if (isIpInNetwork(listedIp, currentPublicIp)) {
                         isIpInList = true;
                         break;
                     }
@@ -675,6 +831,141 @@ public class MainActivity extends AppCompatActivity implements OnIpLongPressList
             currentIpStatusTextView.setText("Your current IP (" + currentPublicIp + ") is NOT in the Cloudflare group.");
             currentIpStatusTextView.setTextColor(getResources().getColor(R.color.black, getTheme()));
             currentIpStatusTextView.setBackgroundColor(getResources().getColor(R.color.status_orange, getTheme()));
+        }
+    }
+
+    private boolean isIpInNetwork(String cidrNetworkStr, String hostIpStr) {
+        try {
+            String[] parts = cidrNetworkStr.split("/");
+            if (parts.length != 2) {
+                return parts[0].equals(hostIpStr.split("/")[0]);
+            }
+            String networkAddressStr = parts[0];
+            int prefixLength = Integer.parseInt(parts[1]);
+
+            InetAddress networkAddress = InetAddress.getByName(networkAddressStr);
+            InetAddress hostAddress = InetAddress.getByName(hostIpStr.split("/")[0]); // Remove CIDR from host if present
+
+            if (networkAddress.getClass() != hostAddress.getClass()) {
+                return false;
+            }
+
+            byte[] networkBytes = networkAddress.getAddress();
+            byte[] hostBytes = hostAddress.getAddress();
+
+            // Create a mask based on the prefix length
+            byte[] maskBytes = new byte[networkBytes.length];
+            for (int i = 0; i < maskBytes.length; i++) {
+                if (prefixLength > 8) {
+                    maskBytes[i] = (byte) 0xFF;
+                    prefixLength -= 8;
+                } else if (prefixLength > 0) {
+                    maskBytes[i] = (byte) ((0xFF << (8 - prefixLength)) & 0xFF);
+                    prefixLength = 0;
+                } else {
+                    maskBytes[i] = (byte) 0x00;
+                }
+            }
+
+            // Apply mask to both addresses
+            byte[] maskedNetwork = new byte[networkBytes.length];
+            byte[] maskedHost = new byte[hostBytes.length];
+
+            for (int i = 0; i < networkBytes.length; i++) {
+                maskedNetwork[i] = (byte) (networkBytes[i] & maskBytes[i]);
+                maskedHost[i] = (byte) (hostBytes[i] & maskBytes[i]);
+            }
+
+            return java.util.Arrays.equals(maskedNetwork, maskedHost);
+
+        } catch (UnknownHostException | NumberFormatException | ArrayIndexOutOfBoundsException e) {
+            Log.e("IPNetworkCheck", "Error checking if IP " + hostIpStr + " is in network " + cidrNetworkStr, e);
+            return false;
+        }
+    }
+
+    private ConnectivityManager.NetworkCallback networkCallback;
+
+    private void registerNetworkCallback() {
+        ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        if (connectivityManager == null) return;
+
+        networkCallback = new ConnectivityManager.NetworkCallback() {
+            @Override
+            public void onAvailable(@NonNull Network network) {
+                super.onAvailable(network);
+                Log.i("NetworkCallback", "Network available. Triggering IP check.");
+                 OneTimeWorkRequest oneTimeCheck = new OneTimeWorkRequest.Builder(PublicIpMonitorWorker.class)
+                        .setConstraints(new Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+                        .build();
+                 WorkManager.getInstance(getApplicationContext()).enqueue(oneTimeCheck);
+            }
+
+            @Override
+            public void onLost(@NonNull Network network) {
+                super.onLost(network);
+                Log.i("NetworkCallback", "Network lost.");
+            }
+        };
+
+        NetworkRequest networkRequest = new NetworkRequest.Builder()
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                .build();
+        try {
+            connectivityManager.registerNetworkCallback(networkRequest, networkCallback);
+        } catch (SecurityException e) {
+            Log.e("NetworkCallback", "Permission denied for network callback", e);
+            // Handle lack of ACCESS_NETWORK_STATE?
+        }
+    }
+
+    private void unregisterNetworkCallback() {
+        if (networkCallback != null) {
+            ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+            if (connectivityManager != null) {
+                try {
+                    connectivityManager.unregisterNetworkCallback(networkCallback);
+                } catch (Exception e) {
+                    Log.e("NetworkCallback", "Error unregistering network callback", e);
+                }
+            }
+            networkCallback = null;
+        }
+    }
+
+    private String readIPFromJSON(String json) {
+        Gson gson = new Gson();
+        String ipAddress = null;
+        try {
+            JsonObject jsonObject = gson.fromJson(json, JsonObject.class);
+
+            if (jsonObject.has("IP")) {
+                JsonElement ipElement = jsonObject.get("IP");
+                if (ipElement != null && !ipElement.isJsonNull()) {
+                    ipAddress = ipElement.getAsString();
+                    Log.d("JSON_Parse", "IP Address from Gson (JsonObject): " + ipAddress);
+                } else {
+                    Log.w("JSON_Parse", "Key 'ip' found but value is null or not a string (Gson JsonObject)");
+                }
+            }
+            else {
+                Log.w("JSON_Parse", "Key 'IP' not found in JSON response");
+            }
+        } catch (JsonSyntaxException e) {
+            Log.e("JSON_Parse", "Error parsing JSON with Gson: " + e.getMessage());
+        }
+        return ipAddress;
+    }
+
+    private boolean isCorrectIPFormat(String ipAddress) {
+        try {
+            InetAddress.getByName(ipAddress.split("/")[0]);
+            return true;
+        } catch (UnknownHostException e) {
+            final String errorMsg = "Invalid IP address format received: " + ipAddress;
+            Log.e("GetPublicIP", errorMsg, e);
+            runOnUiThread(() -> Toast.makeText(MainActivity.this, errorMsg, Toast.LENGTH_LONG).show());
+            return false;
         }
     }
 
