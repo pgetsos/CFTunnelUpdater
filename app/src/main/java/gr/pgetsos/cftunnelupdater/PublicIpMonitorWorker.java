@@ -67,14 +67,14 @@ public class PublicIpMonitorWorker extends Worker {
         }
         Log.i(TAG, "Current Public IP: " + currentPublicIp);
 
-        String lastAutoAddedIp = sharedPreferences.getString(PREF_LAST_AUTO_ADDED_IP, null);
+        String lastAutoAddedIp = sharedPreferences.getString(PREF_LAST_AUTO_ADDED_IP, "");
         Log.i(TAG, "Last Auto-Added IP: " + lastAutoAddedIp);
 
 
         String baseCurrentPublicIp = currentPublicIp.split("/")[0];
-        String baseLastAutoAddedIp = lastAutoAddedIp != null ? lastAutoAddedIp.split("/")[0] : null;
+        String baseLastAutoAddedIp = !lastAutoAddedIp.isBlank() ? lastAutoAddedIp.split("/")[0] : "";
 
-        if (baseLastAutoAddedIp != null && baseCurrentPublicIp.equals(baseLastAutoAddedIp)) {
+        if (baseCurrentPublicIp.equals(baseLastAutoAddedIp)) {
             Log.i(TAG, "Public IP (" + baseCurrentPublicIp + ") has not changed since last auto-update.");
             return Result.success();
         }
@@ -98,13 +98,13 @@ public class PublicIpMonitorWorker extends Worker {
 
         for (AccessGroupResponse.IncludeItem item : currentGroup.result.include) {
             if (item.ip != null && item.ip.ip != null) {
-                if (lastAutoAddedIp != null && item.ip.ip.equals(lastAutoAddedIp)) {
+                if (item.ip.ip.equals(lastAutoAddedIp)) {
                     Log.i(TAG, "Removing old auto-added IP: " + lastAutoAddedIp);
                     continue;
                 }
 
                 String normalizedNewPublicIpWithCidr = normalizeIpWithCidr(baseCurrentPublicIp);
-                if (normalizedNewPublicIpWithCidr != null && item.ip.ip.equals(normalizedNewPublicIpWithCidr)) {
+                if (item.ip.ip.equals(normalizedNewPublicIpWithCidr)) {
                     newIpAlreadyInListManually = true;
                     Log.i(TAG, "New public IP " + normalizedNewPublicIpWithCidr + " was already in the group.");
                 }
@@ -115,7 +115,7 @@ public class PublicIpMonitorWorker extends Worker {
 
         if (!newIpAlreadyInListManually) {
             String newIpWithCidr = normalizeIpWithCidr(baseCurrentPublicIp);
-            if (newIpWithCidr != null) {
+            if (!newIpWithCidr.isBlank()) {
                 AccessGroupResponse.IncludeItem newIpItem = new AccessGroupResponse.IncludeItem();
                 AccessGroupResponse.Ip ipDetails = new AccessGroupResponse.Ip();
                 ipDetails.ip = newIpWithCidr;
@@ -129,7 +129,7 @@ public class PublicIpMonitorWorker extends Worker {
         }
 
 
-        MainActivity.AccessGroupUpdateRequest updateRequestPayload = new MainActivity.AccessGroupUpdateRequest();
+        AccessGroupUpdateRequest updateRequestPayload = new AccessGroupUpdateRequest();
         updateRequestPayload.include = updatedIncludeList;
 
         String bodyJson = gson.toJson(updateRequestPayload);
@@ -157,7 +157,7 @@ public class PublicIpMonitorWorker extends Worker {
         } catch (UnknownHostException e) {
             Log.e(TAG, "Invalid IP for normalization: " + baseIp, e);
         }
-        return null;
+        return "";
     }
 
 

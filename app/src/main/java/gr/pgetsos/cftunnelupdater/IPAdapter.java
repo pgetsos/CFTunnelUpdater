@@ -13,7 +13,6 @@ public class IPAdapter extends RecyclerView.Adapter<IPAdapter.ViewHolder> {
     private List<String> ipList;
     private OnIpLongPressListener longPressListener;
 
-    // Modify constructor to accept the listener
     public IPAdapter(List<String> ipList, OnIpLongPressListener longPressListener) {
         this.ipList = ipList;
         this.longPressListener = longPressListener;
