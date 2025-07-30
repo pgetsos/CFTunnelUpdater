@@ -34,11 +34,20 @@ import java.util.Scanner;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class AddIpFragment extends Fragment {
-    private EditText accountEt, groupEt, apiEt, ipEditText, customIpCheckerUrlEditText;
+    private EditText accountEt;
+    private EditText groupEt;
+    private EditText apiEt;
+    private EditText ipEditText;
+    private EditText customIpCheckerUrlEditText;
     private SwitchMaterial useCustomIpCheckerSwitch;
     private TextInputLayout customIpCheckerUrlTil;
     private TextView currentIpStatusTextView;
-    private String accountID, groupID, apiToken, currentIpCheckerType, currentCustomIpCheckerUrl, ipAddr;
+    private String accountID;
+    private String groupID;
+    private String apiToken;
+    private String currentIpCheckerType;
+    private String currentCustomIpCheckerUrl;
+    private String ipAddress;
     private AtomicReference<String> publicIp = new AtomicReference<>();
 
     private SettingsManager settingsManager;
@@ -103,8 +112,8 @@ public class AddIpFragment extends Fragment {
 
         button.setOnClickListener(view -> {
             saveCurrentSettings();
-            ipAddr = ipEditText.getText().toString();
-            if (ipAddr.isBlank()) {
+            ipAddress = ipEditText.getText().toString();
+            if (ipAddress.isBlank()) {
                 Toast.makeText(getContext(), "Please enter an IP address", Toast.LENGTH_SHORT).show();
                 return;
             }
@@ -117,7 +126,7 @@ public class AddIpFragment extends Fragment {
 
         saveSettingsButton.setOnClickListener(view -> {
             saveCurrentSettings();
-            Toast.makeText(getContext(), "Settings Saved!", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), R.string.settings_saved, Toast.LENGTH_SHORT).show();
         });
 
         ipButton.setOnClickListener(view -> getPublicIP());
@@ -125,7 +134,7 @@ public class AddIpFragment extends Fragment {
 
     private void saveCurrentSettings() {
         if (accountEt == null || groupEt == null || apiEt == null) {
-            Log.e("SaveSettings", "One or more credential EditTexts not found. Cannot save credentials.");
+            Log.e("SaveSettings", getString(R.string.credential_et_not_found_cannot_save));
         } else {
             accountID = accountEt.getText().toString().trim();
             groupID = groupEt.getText().toString().trim();
@@ -159,15 +168,15 @@ public class AddIpFragment extends Fragment {
                 AccessGroupResponse.Ip newIp = new AccessGroupResponse.Ip();
                 InetAddress address = null;
                 try {
-                    address = InetAddress.getByName(ipAddr);
+                    address = InetAddress.getByName(ipAddress);
                 } catch (UnknownHostException e) {
                     toastUi("Invalid IP address");
                     return;
                 }
                 if (address instanceof Inet6Address) {
-                    newIp.ip = ipAddr + "/64";
+                    newIp.ip = ipAddress + "/64";
                 } else if (address instanceof Inet4Address) {
-                    newIp.ip = ipAddr + "/32";
+                    newIp.ip = ipAddress + "/32";
                 } else {
                     toastUi("Unknown IP address type");
                     return;
@@ -193,8 +202,8 @@ public class AddIpFragment extends Fragment {
                 cloudflareApiHelper.updateAccessGroup(accountID, groupID, apiToken, newList, new CloudflareApiHelper.ApiCallback<>() {
                     @Override
                     public void onSuccess(Boolean ok) {
-                        getActivity().runOnUiThread(() -> {
-                            toastUi("Added IP successfully");
+                        requireActivity().runOnUiThread(() -> {
+                            toastUi(getString(R.string.added_ip_successfully));
                             updateCurrentIpStatus();
                         });
                     }
@@ -219,7 +228,7 @@ public class AddIpFragment extends Fragment {
             if (MainActivity.IP_CHECKER_TYPE_CUSTOM.equals(currentIpCheckerType)) {
                 urlString = currentCustomIpCheckerUrl;
                 if (urlString == null || urlString.trim().isEmpty()) {
-                    toastUi("Custom IP Checker URL is not set.");
+                    toastUi(getString(R.string.custom_ip_checker_url_is_not_set));
                     return;
                 }
             }
@@ -246,14 +255,12 @@ public class AddIpFragment extends Fragment {
                     return;
                 }
 
-                if (getActivity() != null) {
-                    getActivity().runOnUiThread(() -> {
-                        if (ipEditText != null) {
-                            ipEditText.setText(publicIp.get());
-                        }
-                        updateCurrentIpStatus();
-                    });
-                }
+                requireActivity().runOnUiThread(() -> {
+                    if (ipEditText != null) {
+                        ipEditText.setText(publicIp.get());
+                    }
+                    updateCurrentIpStatus();
+                });
                 connection.disconnect();
             } catch (Exception e) {
                 Log.e("GetPublicIP", "Error fetching public IP", e);
@@ -290,7 +297,7 @@ public class AddIpFragment extends Fragment {
             java.net.InetAddress.getByName(ipAddress.split("/")[0]);
             return true;
         } catch (java.net.UnknownHostException e) {
-            final String errorMsg = "Invalid IP address format received: " + ipAddress;
+            final String errorMsg = String.format(getString(R.string.invalid_ip_address_format_received_s), ipAddress);
             Log.e("GetPublicIP", errorMsg, e);
             toastUi(errorMsg);
             return false;
@@ -305,18 +312,18 @@ public class AddIpFragment extends Fragment {
 
         String currentPublicIp = (ipEditText != null) ? ipEditText.getText().toString() : "";
         if (currentPublicIp.isEmpty()) {
-            currentIpStatusTextView.setText("Fetching your current IP …");
+            currentIpStatusTextView.setText(R.string.fetching_your_current_ip);
             return;
         }
 
         if (accountID.isEmpty() || groupID.isEmpty() || apiToken.isEmpty()) {
-            currentIpStatusTextView.setText("Set credentials to check IP status");
+            currentIpStatusTextView.setText(R.string.set_credentials_to_check_ip_status);
             if (getContext() != null)
                 currentIpStatusTextView.setTextColor(requireContext().getResources().getColor(android.R.color.darker_gray, requireContext().getTheme()));
             return;
         }
 
-        currentIpStatusTextView.setText("Checking IP status …");
+        currentIpStatusTextView.setText(R.string.checking_ip_status);
         if (getContext() != null)
             currentIpStatusTextView.setTextColor(requireContext().getResources().getColor(android.R.color.darker_gray, requireContext().getTheme()));
 
@@ -331,14 +338,13 @@ public class AddIpFragment extends Fragment {
                     }
                 }
                 final boolean finalIsIpInList = isIpInList;
-                if (getActivity() == null) return;
-                getActivity().runOnUiThread(() -> {
+                requireActivity().runOnUiThread(() -> {
                     if (finalIsIpInList) {
-                        currentIpStatusTextView.setText("Your current IP (" + currentPublicIp + ") is in the Cloudflare group.");
+                        currentIpStatusTextView.setText(String.format("Your current IP (%s) is in the Cloudflare group.", currentPublicIp));
                         currentIpStatusTextView.setTextColor(requireContext().getResources().getColor(R.color.status_green, requireContext().getTheme()));
                         currentIpStatusTextView.setBackgroundColor(requireContext().getResources().getColor(android.R.color.transparent, requireContext().getTheme()));
                     } else {
-                        currentIpStatusTextView.setText("Your current IP (" + currentPublicIp + ") is NOT in the Cloudflare group.");
+                        currentIpStatusTextView.setText(String.format("Your current IP (%s) is NOT in the Cloudflare group.", currentPublicIp));
                         currentIpStatusTextView.setTextColor(requireContext().getResources().getColor(R.color.black, requireContext().getTheme()));
                         currentIpStatusTextView.setBackgroundColor(requireContext().getResources().getColor(R.color.status_orange, requireContext().getTheme()));
                     }
@@ -347,9 +353,8 @@ public class AddIpFragment extends Fragment {
 
             @Override
             public void onError(Exception e) {
-                if (getActivity() == null) return;
-                getActivity().runOnUiThread(() -> {
-                    currentIpStatusTextView.setText("Failed to check IP status (" + e.getMessage() + ")");
+                requireActivity().runOnUiThread(() -> {
+                    currentIpStatusTextView.setText(String.format("Failed to check IP status (%s)", e.getMessage()));
                     currentIpStatusTextView.setTextColor(requireContext().getResources().getColor(android.R.color.darker_gray, requireContext().getTheme()));
                 });
             }
@@ -361,7 +366,6 @@ public class AddIpFragment extends Fragment {
             if (cidrNetworkStr == null || hostIpStr == null) return false;
             String[] parts = cidrNetworkStr.split("/");
             if (parts.length != 2) {
-                // Not a CIDR; compare direct
                 return parts[0].equals(hostIpStr.split("/")[0]);
             }
             String networkAddressStr = parts[0];
@@ -373,7 +377,6 @@ public class AddIpFragment extends Fragment {
             }
             byte[] networkBytes = networkAddress.getAddress();
             byte[] hostBytes = hostAddress.getAddress();
-            // Create a mask based on the prefix length
             byte[] maskBytes = new byte[networkBytes.length];
             for (int i = 0; i < maskBytes.length; i++) {
                 if (prefixLength > 8) {
@@ -386,7 +389,6 @@ public class AddIpFragment extends Fragment {
                     maskBytes[i] = (byte) 0x00;
                 }
             }
-            // Apply mask to both addresses
             byte[] maskedNetwork = new byte[networkBytes.length];
             byte[] maskedHost = new byte[hostBytes.length];
             for (int i = 0; i < networkBytes.length; i++) {
@@ -395,13 +397,12 @@ public class AddIpFragment extends Fragment {
             }
             return java.util.Arrays.equals(maskedNetwork, maskedHost);
         } catch (Exception e) {
-            Log.e("IPNetworkCheck", "Error checking if IP " + hostIpStr + " is in network " + cidrNetworkStr, e);
+            Log.e("IPNetworkCheck", String.format("Error checking if IP %s is in network %s", hostIpStr, cidrNetworkStr), e);
             return false;
         }
     }
 
     private void toastUi(String s) {
-        if (getActivity() != null)
-            getActivity().runOnUiThread(() -> Toast.makeText(getContext(), s, Toast.LENGTH_SHORT).show());
+            requireActivity().runOnUiThread(() -> Toast.makeText(getContext(), s, Toast.LENGTH_SHORT).show());
     }
 }

@@ -3,4 +3,10 @@
     <string name="no_ips_present">No IPs present</string>
     <string name="fetching_your_current_ip">Fetching your current IP...</string>
     <string name="set_credentials_to_check_ip_status">Set credentials to check IP status.</string>
+    <string name="checking_ip_status">Checking IP status…</string>
+    <string name="invalid_ip_address_format_received_s">Invalid IP address format received: %s</string>
+    <string name="custom_ip_checker_url_is_not_set">Custom IP Checker URL is not set.</string>
+    <string name="added_ip_successfully">Added IP successfully</string>
+    <string name="credential_et_not_found_cannot_save">One or more credential EditTexts not found. Cannot save credentials.</string>
+    <string name="settings_saved">Settings Saved!</string>
 </resources>

@@ -69,8 +69,7 @@ public class ListIpsFragment extends Fragment {
                 new CloudflareApiHelper.ApiCallback<Boolean>() {
                     @Override
                     public void onSuccess(Boolean deleted) {
-                        if (getActivity() == null) return;
-                        getActivity().runOnUiThread(() -> {
+                        requireActivity().runOnUiThread(() -> {
                             if (deleted) {
                                 Toast.makeText(getContext(), "IP " + ipToDelete + " deleted successfully.", Toast.LENGTH_SHORT).show();
                             } else {
@@ -82,8 +81,7 @@ public class ListIpsFragment extends Fragment {
 
                     @Override
                     public void onError(Exception e) {
-                        if (getActivity() == null) return;
-                        getActivity().runOnUiThread(() -> Toast.makeText(getContext(), "Deletion failed: " + e.getMessage(), Toast.LENGTH_LONG).show());
+                        requireActivity().runOnUiThread(() -> Toast.makeText(getContext(), "Deletion failed: " + e.getMessage(), Toast.LENGTH_LONG).show());
                     }
                 }
         );
@@ -115,8 +113,7 @@ public class ListIpsFragment extends Fragment {
     }
 
     private void updateList(List<String> ips) {
-        if (getActivity() == null) return;
-        getActivity().runOnUiThread(() -> {
+        requireActivity().runOnUiThread(() -> {
             ipAdapter.updateList(ips);
             if (ips.isEmpty()) {
                 emptyText.setVisibility(View.VISIBLE);
@@ -130,8 +127,7 @@ public class ListIpsFragment extends Fragment {
     }
 
     private void setEmptyState(String message) {
-        if (getActivity() == null) return;
-        getActivity().runOnUiThread(() -> {
+        requireActivity().runOnUiThread(() -> {
             emptyText.setVisibility(View.VISIBLE);
             emptyText.setText(message);
         });

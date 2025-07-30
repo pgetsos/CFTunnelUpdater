@@ -28,6 +28,20 @@ Then, when you open the app, it fills the IP input with the current IP your phon
 
 Clicking "Add IP to CF" should add the IP to your Group, and give it access to your Applications behind the tunnel. A small Toast will appear on success! Each IP can be added only once, so don't worry about spaming the same IP multiple times in the Group!
 
+# How to add sync capability
+The app uses the Cloudflare Workers and KV store to provide the ability for synchronization of IP names, creation datetime and expiration datetime (when these are implemented).
+You have to provide your own API key and create the Worker and KV Store. To do this:
+
+- Navigate to https://dash.cloudflare.com/?to=/:account/workers/kv/namespaces
+- Create a new KV Store, name it (let's say kv-cfupdater) and click Add
+- Navigate to Workers & Pages (https://dash.cloudflare.com/?to=/:account/workers-and-pages), create a new Worker (if it is the first one, click to create the Hello World one)
+- Give a name to the worker, preferably kv_cfupdater, and click Deploy
+- Click Edit code after deployment, delete the default code, and add the code in the worker.js of this repository. REMEMBER TO CHANGE THE API KEY, and also change the kv store name in the code if you choose something other than kv_cfupdater
+- Save and deploy
+- Go to the Worker page, Bindings, Add binding, choose KV from the list, add the name kv_cfupdater and choose the kv-cfupdater from the list of KV namespaces. Save
+
+
+
 # Roadmap
 In no particular order, these are things I want to implement someday
 - [ ] Create release (and automate it, maybe)
