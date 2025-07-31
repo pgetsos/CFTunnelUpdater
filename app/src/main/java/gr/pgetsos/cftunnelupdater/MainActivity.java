@@ -25,13 +25,18 @@ import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends AppCompatActivity {
 
-    private static final String IP_MONITOR_WORK_TAG = "ipMonitorWork";
-    public static final String IP_CHECKER_TYPE_IPIFY = "ipify";
-    public static final String IP_CHECKER_TYPE_CUSTOM = "custom";
+    private static final String TAG_IP_MONITOR_WORK = "IP_MONITOR_WORK";
+
+    private static final String TAG_ADD_IP_FRAGMENT = "TAG_ADD_IP_FRAGMENT";
+    private static final String TAG_LIST_IPS_FRAGMENT = "TAG_LIST_IPS_FRAGMENT";
+    private static final String TAG_SETTINGS_FRAGMENT = "TAG_SETTINGS_FRAGMENT";
+    private static final String KEY_SELECTED_NAV_ITEM_ID = "KEY_SELECTED_NAV_ITEM_ID";
 
     private int selectedNavItemId = R.id.nav_add_ip;
-
     private Fragment activeFragment;
+    private AddIpFragment addIpFragment;
+    private ListIpsFragment listIpsFragment;
+    private SettingsFragment settingsFragment;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,30 +49,49 @@ public class MainActivity extends AppCompatActivity {
             return insets;
         });
 
-        if (savedInstanceState != null) {
-            selectedNavItemId = savedInstanceState.getInt("selectedNavItemId", R.id.nav_add_ip);
+        if (savedInstanceState == null) {
+            addIpFragment = new AddIpFragment();
+            listIpsFragment = new ListIpsFragment();
+            settingsFragment = new SettingsFragment();
+            getSupportFragmentManager().beginTransaction()
+                    .add(R.id.container, settingsFragment, TAG_SETTINGS_FRAGMENT).hide(settingsFragment)
+                    .add(R.id.container, listIpsFragment, TAG_LIST_IPS_FRAGMENT).hide(listIpsFragment)
+                    .add(R.id.container, addIpFragment, TAG_ADD_IP_FRAGMENT)
+                    .commit();
+            activeFragment = addIpFragment;
+        } else {
+            selectedNavItemId = savedInstanceState.getInt(KEY_SELECTED_NAV_ITEM_ID, R.id.nav_add_ip);
+            addIpFragment = (AddIpFragment) getSupportFragmentManager().findFragmentByTag(TAG_ADD_IP_FRAGMENT);
+            listIpsFragment = (ListIpsFragment) getSupportFragmentManager().findFragmentByTag(TAG_LIST_IPS_FRAGMENT);
+            settingsFragment = (SettingsFragment) getSupportFragmentManager().findFragmentByTag(TAG_SETTINGS_FRAGMENT);
+
+            if (selectedNavItemId == R.id.nav_list_ips) {
+                activeFragment = listIpsFragment;
+            } else if (selectedNavItemId == R.id.nav_settings) {
+                activeFragment = settingsFragment;
+            }
+            else {
+                activeFragment = addIpFragment;
+            }
         }
-
-        AddIpFragment addIpFragment = new AddIpFragment();
-        ListIpsFragment listIpsFragment = new ListIpsFragment();
-        activeFragment = addIpFragment;
-        getSupportFragmentManager().beginTransaction()
-                .add(R.id.container, listIpsFragment, "2").hide(listIpsFragment)
-                .add(R.id.container, addIpFragment, "1")
-        .commit();
-
-        showFragment(selectedNavItemId == R.id.nav_list_ips ? listIpsFragment : addIpFragment);
 
         BottomNavigationView bottomNav = findViewById(R.id.bottom_nav);
         bottomNav.setOnItemSelectedListener(item -> {
-            if (item.getItemId() == selectedNavItemId) return true;
-            if (item.getItemId() == R.id.nav_add_ip) {
-                selectedNavItemId = R.id.nav_add_ip;
-                showFragment(addIpFragment);
+            if (item.getItemId() == selectedNavItemId) {
                 return true;
+            }
+            Fragment targetFragment = null;
+            if (item.getItemId() == R.id.nav_add_ip) {
+                targetFragment = addIpFragment;
             } else if (item.getItemId() == R.id.nav_list_ips) {
-                selectedNavItemId = R.id.nav_list_ips;
-                showFragment(listIpsFragment);
+                targetFragment = listIpsFragment;
+            } else if (item.getItemId() == R.id.nav_settings) {
+                targetFragment = settingsFragment;
+            }
+
+            if (targetFragment != null) {
+                selectedNavItemId = item.getItemId();
+                showFragment(targetFragment);
                 return true;
             }
             return false;
@@ -75,8 +99,8 @@ public class MainActivity extends AppCompatActivity {
 
         bottomNav.setSelectedItemId(selectedNavItemId);
 
-        boolean autoUpdateEnabled = getSharedPreferences("MyPrefs", Context.MODE_PRIVATE)
-                .getBoolean(PublicIpMonitorWorker.PREF_AUTO_UPDATE_ENABLED, false);
+        boolean autoUpdateEnabled = getSharedPreferences(SettingsManager.PREFS_NAME, Context.MODE_PRIVATE)
+                .getBoolean(SettingsManager.PREF_AUTO_UPDATE_ENABLED, false);
 
         if (autoUpdateEnabled) {
             schedulePublicIpMonitor();
@@ -92,11 +116,11 @@ public class MainActivity extends AppCompatActivity {
                 new PeriodicWorkRequest.Builder(PublicIpMonitorWorker.class,
                         15, TimeUnit.MINUTES) // Minimum interval for PeriodicWork
                         .setConstraints(constraints)
-                        .addTag(IP_MONITOR_WORK_TAG)
+                        .addTag(TAG_IP_MONITOR_WORK)
                         .build();
 
         WorkManager.getInstance(this).enqueueUniquePeriodicWork(
-                IP_MONITOR_WORK_TAG,
+                TAG_IP_MONITOR_WORK,
                 ExistingPeriodicWorkPolicy.KEEP,
                 ipMonitorWorkRequest);
 
@@ -104,11 +128,18 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void cancelPublicIpMonitor() {
-        WorkManager.getInstance(this).cancelUniqueWork(IP_MONITOR_WORK_TAG);
+        WorkManager.getInstance(this).cancelUniqueWork(TAG_IP_MONITOR_WORK);
         Log.i("MainActivity", "Public IP Monitor work canceled.");
     }
 
     private void showFragment(Fragment fragment) {
+        if (fragment == null || activeFragment == null) {
+            return;
+        }
+        if (fragment == activeFragment) {
+            return;
+        }
+
         FragmentManager fragmentManager = getSupportFragmentManager();
         fragmentManager.beginTransaction()
                         .hide(activeFragment)
@@ -119,7 +150,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onSaveInstanceState(@NonNull Bundle outState) {
-        outState.putInt("selectedNavItemId", selectedNavItemId);
+        outState.putInt(KEY_SELECTED_NAV_ITEM_ID, selectedNavItemId);
         super.onSaveInstanceState(outState);
     }
 

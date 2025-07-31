@@ -6,66 +6,13 @@
     android:layout_height="match_parent"
     android:padding="16dp">
 
-    <!-- Account ID -->
-    <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/account_til"
-        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:hint="Account ID">
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/account_et"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:inputType="text" />
-    </com.google.android.material.textfield.TextInputLayout>
-
-    <!-- Group ID -->
-    <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/group_til"
-        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        app:layout_constraintTop_toBottomOf="@id/account_til"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:hint="Group ID">
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/group_et"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:inputType="text" />
-    </com.google.android.material.textfield.TextInputLayout>
-
-    <!-- API Token -->
-    <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/api_til"
-        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        app:layout_constraintTop_toBottomOf="@id/group_til"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:hint="API Token">
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/api_et"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:inputType="textPassword" />
-    </com.google.android.material.textfield.TextInputLayout>
-
     <com.google.android.material.switchmaterial.SwitchMaterial
         android:id="@+id/custom_ip_checker_switch"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:text="Custom IP Checker Site"
         android:layout_marginTop="16dp"
-        app:layout_constraintTop_toBottomOf="@id/api_til"
+        app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
 

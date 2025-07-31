@@ -7,4 +7,8 @@
         android:id="@+id/nav_list_ips"
         android:title="List IPs"
         android:icon="@android:drawable/ic_menu_agenda" />
+    <item
+        android:id="@+id/nav_settings"
+        android:title="Settings"
+        android:icon="@android:drawable/ic_menu_manage" />
 </menu>

@@ -32,7 +32,7 @@ public class PublicIpMonitorWorker extends Worker {
 
     private static final String TAG = "PublicIpMonitorWorker";
     public static final String PREF_LAST_AUTO_ADDED_IP = "last_auto_added_ip";
-    public static final String PREF_AUTO_UPDATE_ENABLED = "auto_update_enabled";
+
 
     public PublicIpMonitorWorker(@NonNull Context context, @NonNull WorkerParameters workerParams) {
         super(context, workerParams);
@@ -42,21 +42,20 @@ public class PublicIpMonitorWorker extends Worker {
     @Override
     public Result doWork() {
         Context context = getApplicationContext();
-        SharedPreferences sharedPreferences = context.getSharedPreferences("MyPrefs", Context.MODE_PRIVATE);
+        SharedPreferences sharedPreferences = context.getSharedPreferences(SettingsManager.PREFS_NAME, Context.MODE_PRIVATE);
 
-        boolean autoUpdateEnabled = sharedPreferences.getBoolean(PREF_AUTO_UPDATE_ENABLED, false);
+        boolean autoUpdateEnabled = sharedPreferences.getBoolean(SettingsManager.PREF_AUTO_UPDATE_ENABLED, false);
         if (!autoUpdateEnabled) {
             Log.i(TAG, "Auto-update disabled, skipping work.");
-            return Result.success(); // Or Result.failure() if this shouldn't have been scheduled
+            return Result.success();
         }
 
-        String accountID = sharedPreferences.getString("accountID", "");
-        String groupID = sharedPreferences.getString("groupID", "");
-        String apiToken = sharedPreferences.getString("apiToken", "");
+        String accountID = sharedPreferences.getString(SettingsManager.PREF_ACCOUNT_ID, "");
+        String groupID = sharedPreferences.getString(SettingsManager.PREF_GROUP_ID, "");
+        String apiToken = sharedPreferences.getString(SettingsManager.PREF_ACCESS_GROUP_KEY, "");
 
         if (accountID.isEmpty() || groupID.isEmpty() || apiToken.isEmpty()) {
             Log.e(TAG, "Credentials not set. Cannot perform auto-update.");
-            // Send a notification to the user to set credentials (Someday)
             return Result.failure();
         }
 
@@ -163,11 +162,11 @@ public class PublicIpMonitorWorker extends Worker {
 
     private String fetchPublicIPAddress() {
         try {
-            URL url = new URL("https://api64.ipify.org"); // Or your preferred IP service
+            URL url = new URL("https://api64.ipify.org");
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestProperty("User-Agent", "CFTunnelUpdater-AutoIP/1.0");
-            connection.setConnectTimeout(5000); // 5 seconds
-            connection.setReadTimeout(5000);    // 5 seconds
+            connection.setConnectTimeout(5000);
+            connection.setReadTimeout(5000);
             try (Scanner s = new Scanner(connection.getInputStream(), "UTF-8").useDelimiter("\\A")) {
                 if (s.hasNext()) {
                     return s.next();
@@ -187,10 +186,10 @@ public class PublicIpMonitorWorker extends Worker {
                 .addHeader("authorization", "Bearer " + apiToken)
                 .build();
         try (Response response = client.newCall(request).execute()) {
-            if (response.isSuccessful() && response.body() != null) {
+            if (response.isSuccessful()) {
                 return gson.fromJson(response.body().string(), AccessGroupResponse.class);
             } else {
-                Log.e(TAG, "Fetch CF Group Error: " + response.code() + " - " + (response.body() != null ? response.body().string() : "No body"));
+                Log.e(TAG, "Fetch CF Group Error: " + response.code() + " - " + response.body().string());
             }
         } catch (IOException e) {
             Log.e(TAG, "IOException fetching CF Group", e);
@@ -210,7 +209,7 @@ public class PublicIpMonitorWorker extends Worker {
             if (response.isSuccessful()) {
                 return true;
             } else {
-                Log.e(TAG, "Update CF Group Error: " + response.code() + " - " + (response.body() != null ? response.body().string() : "No body"));
+                Log.e(TAG, "Update CF Group Error: " + response.code() + " - " + response.body().string());
             }
         } catch (IOException e) {
             Log.e(TAG, "IOException updating CF Group", e);
@@ -218,4 +217,3 @@ public class PublicIpMonitorWorker extends Worker {
         return false;
     }
 }
-

@@ -34,9 +34,9 @@ import java.util.Scanner;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class AddIpFragment extends Fragment {
-    private EditText accountEt;
-    private EditText groupEt;
-    private EditText apiEt;
+    public static final String IP_CHECKER_TYPE_CUSTOM = "CUSTOM";
+    public static final String IP_CHECKER_TYPE_IPIFY = "IPIFY";
+
     private EditText ipEditText;
     private EditText customIpCheckerUrlEditText;
     private SwitchMaterial useCustomIpCheckerSwitch;
@@ -70,25 +70,19 @@ public class AddIpFragment extends Fragment {
         currentIpCheckerType = settingsManager.getIpCheckerType();
         currentCustomIpCheckerUrl = settingsManager.getCustomIpCheckerUrl();
 
-        accountEt = addIpView.findViewById(R.id.account_et);
-        groupEt = addIpView.findViewById(R.id.group_et);
-        apiEt = addIpView.findViewById(R.id.api_et);
         ipEditText = addIpView.findViewById(R.id.ip_et);
         currentIpStatusTextView = addIpView.findViewById(R.id.current_ip_status_tv);
         useCustomIpCheckerSwitch = addIpView.findViewById(R.id.custom_ip_checker_switch);
         customIpCheckerUrlTil = addIpView.findViewById(R.id.custom_ip_checker_url_til);
         customIpCheckerUrlEditText = addIpView.findViewById(R.id.custom_ip_checker_url_et);
 
-        accountEt.setText(accountID);
-        groupEt.setText(groupID);
-        apiEt.setText(apiToken);
         if (publicIp.get() == null || publicIp.get().isBlank()) getPublicIP();
         else {
             ipEditText.setText(publicIp.get());
             updateCurrentIpStatus();
         }
 
-        if (MainActivity.IP_CHECKER_TYPE_CUSTOM.equals(currentIpCheckerType)) {
+        if (IP_CHECKER_TYPE_CUSTOM.equals(currentIpCheckerType)) {
             useCustomIpCheckerSwitch.setChecked(true);
             customIpCheckerUrlTil.setVisibility(View.VISIBLE);
             customIpCheckerUrlEditText.setText(currentCustomIpCheckerUrl);
@@ -98,10 +92,10 @@ public class AddIpFragment extends Fragment {
         }
         useCustomIpCheckerSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if (isChecked) {
-                currentIpCheckerType = MainActivity.IP_CHECKER_TYPE_CUSTOM;
+                currentIpCheckerType = IP_CHECKER_TYPE_CUSTOM;
                 customIpCheckerUrlTil.setVisibility(View.VISIBLE);
             } else {
-                currentIpCheckerType = MainActivity.IP_CHECKER_TYPE_IPIFY;
+                currentIpCheckerType = IP_CHECKER_TYPE_IPIFY;
                 customIpCheckerUrlTil.setVisibility(View.GONE);
             }
         });
@@ -111,7 +105,6 @@ public class AddIpFragment extends Fragment {
         Button saveSettingsButton = addIpView.findViewById(R.id.save_settings_button);
 
         button.setOnClickListener(view -> {
-            saveCurrentSettings();
             ipAddress = ipEditText.getText().toString();
             if (ipAddress.isBlank()) {
                 Toast.makeText(getContext(), "Please enter an IP address", Toast.LENGTH_SHORT).show();
@@ -125,39 +118,17 @@ public class AddIpFragment extends Fragment {
         });
 
         saveSettingsButton.setOnClickListener(view -> {
-            saveCurrentSettings();
+            String customIpCheckerUrl = customIpCheckerUrlEditText.getText().toString();
+            currentCustomIpCheckerUrl = customIpCheckerUrl;
+            settingsManager.setIpCheckerType(currentIpCheckerType);
+            settingsManager.setCustomIpCheckerUrl(customIpCheckerUrl);
             Toast.makeText(getContext(), R.string.settings_saved, Toast.LENGTH_SHORT).show();
         });
 
-        ipButton.setOnClickListener(view -> getPublicIP());
-    }
-
-    private void saveCurrentSettings() {
-        if (accountEt == null || groupEt == null || apiEt == null) {
-            Log.e("SaveSettings", getString(R.string.credential_et_not_found_cannot_save));
-        } else {
-            accountID = accountEt.getText().toString().trim();
-            groupID = groupEt.getText().toString().trim();
-            apiToken = apiEt.getText().toString().trim();
-        }
-        if (useCustomIpCheckerSwitch != null && useCustomIpCheckerSwitch.isChecked()) {
-            currentIpCheckerType = MainActivity.IP_CHECKER_TYPE_CUSTOM;
-            if (customIpCheckerUrlEditText != null) {
-                currentCustomIpCheckerUrl = customIpCheckerUrlEditText.getText().toString().trim();
-                if (currentCustomIpCheckerUrl.isEmpty()) {
-                    Toast.makeText(getContext(), "Custom URL is empty. Please provide a URL or disable custom checker.", Toast.LENGTH_LONG).show();
-                    return;
-                }
-            } else {
-                Log.w("SaveSettings", "customIpCheckerUrlEditText is null when trying to save custom URL.");
-            }
-        } else {
-            currentIpCheckerType = MainActivity.IP_CHECKER_TYPE_IPIFY;
-        }
-        settingsManager.saveAll(accountID, groupID, apiToken, currentIpCheckerType, currentCustomIpCheckerUrl);
-        Log.i("SaveSettings", "Settings saved: accountID=" + accountID + ", groupID=" + groupID + ", apiToken=" + apiToken +
-                ", currentIpCheckerType=" + currentIpCheckerType + ", currentCustomIpCheckerUrl=" + currentCustomIpCheckerUrl);
-        updateCurrentIpStatus();
+        ipButton.setOnClickListener(view -> {
+            currentCustomIpCheckerUrl = customIpCheckerUrlEditText.getText().toString();
+            getPublicIP();
+        });
     }
 
     private void addCurrentIpToGroup() {
@@ -225,9 +196,9 @@ public class AddIpFragment extends Fragment {
     private void getPublicIP() {
         new Thread(() -> {
             String urlString = "https://api64.ipify.org";
-            if (MainActivity.IP_CHECKER_TYPE_CUSTOM.equals(currentIpCheckerType)) {
+            if (IP_CHECKER_TYPE_CUSTOM.equals(currentIpCheckerType)) {
                 urlString = currentCustomIpCheckerUrl;
-                if (urlString == null || urlString.trim().isEmpty()) {
+                if (urlString.trim().isEmpty()) {
                     toastUi(getString(R.string.custom_ip_checker_url_is_not_set));
                     return;
                 }
@@ -241,7 +212,7 @@ public class AddIpFragment extends Fragment {
 
                 try (Scanner s = new Scanner(connection.getInputStream(), "UTF-8").useDelimiter("\\A")) {
                     if (s.hasNext()) {
-                        if (MainActivity.IP_CHECKER_TYPE_IPIFY.equals(currentIpCheckerType)) {
+                        if (IP_CHECKER_TYPE_IPIFY.equals(currentIpCheckerType)) {
                             publicIp.set(s.next());
                         } else {
                             publicIp.set(readIPFromJSON(s.next()));

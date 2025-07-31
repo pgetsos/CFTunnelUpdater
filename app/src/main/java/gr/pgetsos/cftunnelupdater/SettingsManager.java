@@ -4,45 +4,50 @@ import android.content.Context;
 import android.content.SharedPreferences;
 
 public class SettingsManager {
-    private static final String PREFS_FILE = "MyPrefs";
-    private static final String KEY_ACCOUNT_ID = "accountID";
-    private static final String KEY_GROUP_ID = "groupID";
-    private static final String KEY_API_TOKEN = "apiToken";
-    public static final String PREF_IP_CHECKER_TYPE = "ip_checker_type";
-    public static final String PREF_CUSTOM_IP_CHECKER_URL = "custom_ip_checker_url";
+
+    public static final String PREFS_NAME = "MyPrefs";
+    public static final String PREF_ACCOUNT_ID = "accountId";
+    public static final String PREF_GROUP_ID = "groupId";
+    public static final String PREF_ACCESS_GROUP_KEY = "accessGroupKey";
+    public static final String PREF_IP_CHECKER_TYPE = "ipCheckerType";
+    public static final String PREF_CUSTOM_IP_CHECKER_URL = "customIpCheckerUrl";
+    public static final String PREF_AUTO_UPDATE_ENABLED = "autoUpdateEnabled";
+    public static final String PREF_KV_ACCOUNT_ID = "kvAccountId";
+    public static final String PREF_KV_NAMESPACE_ID = "kvNamespaceId";
+    public static final String PREF_KV_API_KEY = "kvApiKey";
 
     private final SharedPreferences prefs;
 
     public SettingsManager(Context context) {
-        prefs = context.getSharedPreferences(PREFS_FILE, Context.MODE_PRIVATE);
+        prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
     }
 
     public String getAccountId() {
-        return prefs.getString(KEY_ACCOUNT_ID, "");
+        return prefs.getString(PREF_ACCOUNT_ID, "");
     }
 
     public void setAccountId(String accountId) {
-        prefs.edit().putString(KEY_ACCOUNT_ID, accountId).apply();
+        prefs.edit().putString(PREF_ACCOUNT_ID, accountId).apply();
     }
 
     public String getGroupId() {
-        return prefs.getString(KEY_GROUP_ID, "");
+        return prefs.getString(PREF_GROUP_ID, "");
     }
 
     public void setGroupId(String groupId) {
-        prefs.edit().putString(KEY_GROUP_ID, groupId).apply();
+        prefs.edit().putString(PREF_GROUP_ID, groupId).apply();
     }
 
     public String getApiToken() {
-        return prefs.getString(KEY_API_TOKEN, "");
+        return prefs.getString(PREF_ACCESS_GROUP_KEY, "");
     }
 
     public void setApiToken(String apiToken) {
-        prefs.edit().putString(KEY_API_TOKEN, apiToken).apply();
+        prefs.edit().putString(PREF_ACCESS_GROUP_KEY, apiToken).apply();
     }
 
     public String getIpCheckerType() {
-        return prefs.getString(PREF_IP_CHECKER_TYPE, "ipify");
+        return prefs.getString(PREF_IP_CHECKER_TYPE, "IPIFY");
     }
 
     public void setIpCheckerType(String type) {
@@ -59,9 +64,9 @@ public class SettingsManager {
 
     public void saveAll(String accountId, String groupId, String apiToken, String ipCheckerType, String customIpCheckerUrl) {
         SharedPreferences.Editor editor = prefs.edit();
-        editor.putString(KEY_ACCOUNT_ID, accountId);
-        editor.putString(KEY_GROUP_ID, groupId);
-        editor.putString(KEY_API_TOKEN, apiToken);
+        editor.putString(PREF_ACCOUNT_ID, accountId);
+        editor.putString(PREF_GROUP_ID, groupId);
+        editor.putString(PREF_ACCESS_GROUP_KEY, apiToken);
         editor.putString(PREF_IP_CHECKER_TYPE, ipCheckerType);
         editor.putString(PREF_CUSTOM_IP_CHECKER_URL, customIpCheckerUrl);
         editor.apply();
