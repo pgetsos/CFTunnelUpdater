@@ -13,6 +13,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.ViewModelProvider;
 
 import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.google.android.material.textfield.TextInputLayout;
@@ -52,6 +53,7 @@ public class AddIpFragment extends Fragment {
 
     private SettingsManager settingsManager;
     private CloudflareApiHelper cloudflareApiHelper;
+    private CloudflareViewModel cloudflareViewModel;
 
     @Nullable
     @Override
@@ -59,8 +61,34 @@ public class AddIpFragment extends Fragment {
         View view = inflater.inflate(R.layout.fragment_add_ip, container, false);
         settingsManager = new SettingsManager(requireContext());
         cloudflareApiHelper = new CloudflareApiHelper();
+        cloudflareViewModel = new ViewModelProvider(requireActivity()).get(CloudflareViewModel.class);
         setupViews(view);
         return view;
+    }
+
+    @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+
+        cloudflareViewModel.getCloudflareIpsLiveData().observe(getViewLifecycleOwner(), ips -> {
+            if (ips != null) {
+                updateCurrentIpStatus();
+            }
+        });
+
+        cloudflareViewModel.getIsLoadingLiveData().observe(getViewLifecycleOwner(), isLoading -> {
+            updateCurrentIpStatus();
+        });
+
+        cloudflareViewModel.getErrorLiveData().observe(getViewLifecycleOwner(), error -> {
+            if (error != null && !error.isEmpty()) {
+                 Toast.makeText(getContext(), error, Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        if (!accountID.isEmpty() && !groupID.isEmpty() && !apiToken.isEmpty()){
+            cloudflareViewModel.fetchIps(accountID, groupID, apiToken);
+        }
     }
 
     private void setupViews(View addIpView) {
@@ -76,8 +104,9 @@ public class AddIpFragment extends Fragment {
         customIpCheckerUrlTil = addIpView.findViewById(R.id.custom_ip_checker_url_til);
         customIpCheckerUrlEditText = addIpView.findViewById(R.id.custom_ip_checker_url_et);
 
-        if (publicIp.get() == null || publicIp.get().isBlank()) getPublicIP();
-        else {
+        if (publicIp.get() == null || publicIp.get().isBlank()) {
+            getPublicIP();
+        } else {
             ipEditText.setText(publicIp.get());
             updateCurrentIpStatus();
         }
@@ -154,7 +183,9 @@ public class AddIpFragment extends Fragment {
                 }
                 ii.ip = newIp;
 
-                if (response.result.include == null) response.result.include = new ArrayList<>();
+                if (response.result.include == null) {
+                    response.result.include = new ArrayList<>();
+                }
                 response.result.include.add(ii);
 
                 // Deduplicate
@@ -167,15 +198,18 @@ public class AddIpFragment extends Fragment {
                             break;
                         }
                     }
-                    if (!found) newList.add(element);
+                    if (!found) {
+                        newList.add(element);
+                    }
                 }
 
                 cloudflareApiHelper.updateAccessGroup(accountID, groupID, apiToken, newList, new CloudflareApiHelper.ApiCallback<>() {
                     @Override
                     public void onSuccess(Boolean ok) {
+                        cloudflareViewModel.refreshIps();
                         requireActivity().runOnUiThread(() -> {
                             toastUi(getString(R.string.added_ip_successfully));
-                            updateCurrentIpStatus();
+//                            updateCurrentIpStatus();
                         });
                     }
 
@@ -263,7 +297,9 @@ public class AddIpFragment extends Fragment {
     }
 
     private boolean isCorrectIPFormat(String ipAddress) {
-        if (ipAddress == null) return false;
+        if (ipAddress == null) {
+            return false;
+        }
         try {
             java.net.InetAddress.getByName(ipAddress.split("/")[0]);
             return true;
@@ -276,10 +312,13 @@ public class AddIpFragment extends Fragment {
     }
 
     private void updateCurrentIpStatus() {
-        if (currentIpStatusTextView == null) return;
+        if (currentIpStatusTextView == null) {
+            return;
+        }
 
-        if (getContext() != null)
+        if (getContext() != null) {
             currentIpStatusTextView.setBackgroundColor(requireContext().getResources().getColor(android.R.color.transparent, requireContext().getTheme()));
+        }
 
         String currentPublicIp = (ipEditText != null) ? ipEditText.getText().toString() : "";
         if (currentPublicIp.isEmpty()) {
@@ -289,52 +328,55 @@ public class AddIpFragment extends Fragment {
 
         if (accountID.isEmpty() || groupID.isEmpty() || apiToken.isEmpty()) {
             currentIpStatusTextView.setText(R.string.set_credentials_to_check_ip_status);
-            if (getContext() != null)
+            if (getContext() != null) {
                 currentIpStatusTextView.setTextColor(requireContext().getResources().getColor(android.R.color.darker_gray, requireContext().getTheme()));
+            }
             return;
         }
 
-        currentIpStatusTextView.setText(R.string.checking_ip_status);
-        if (getContext() != null)
+        if (Boolean.TRUE.equals(cloudflareViewModel.getIsLoadingLiveData().getValue())) {
+            currentIpStatusTextView.setText(R.string.checking_ip_status);
+            return;
+        }
+
+        if (getContext() != null) {
             currentIpStatusTextView.setTextColor(requireContext().getResources().getColor(android.R.color.darker_gray, requireContext().getTheme()));
+        }
 
-        cloudflareApiHelper.fetchIpsFromCloudflare(accountID, groupID, apiToken, new CloudflareApiHelper.ApiCallback<>() {
-            @Override
-            public void onSuccess(List<String> ips) {
-                boolean isIpInList = false;
-                for (String listedIp : ips) {
-                    if (isIpInNetwork(listedIp, currentPublicIp)) {
-                        isIpInList = true;
-                        break;
-                    }
-                }
-                final boolean finalIsIpInList = isIpInList;
-                requireActivity().runOnUiThread(() -> {
-                    if (finalIsIpInList) {
-                        currentIpStatusTextView.setText(String.format("Your current IP (%s) is in the Cloudflare group.", currentPublicIp));
-                        currentIpStatusTextView.setTextColor(requireContext().getResources().getColor(R.color.status_green, requireContext().getTheme()));
-                        currentIpStatusTextView.setBackgroundColor(requireContext().getResources().getColor(android.R.color.transparent, requireContext().getTheme()));
-                    } else {
-                        currentIpStatusTextView.setText(String.format("Your current IP (%s) is NOT in the Cloudflare group.", currentPublicIp));
-                        currentIpStatusTextView.setTextColor(requireContext().getResources().getColor(R.color.black, requireContext().getTheme()));
-                        currentIpStatusTextView.setBackgroundColor(requireContext().getResources().getColor(R.color.status_orange, requireContext().getTheme()));
-                    }
-                });
+        List<String> ips = cloudflareViewModel.getCloudflareIpsLiveData().getValue();
+
+        if (ips == null) {
+            currentIpStatusTextView.setText(String.format("Failed to check IP status (%s)", "Cloudflare returned with error"));
+            currentIpStatusTextView.setTextColor(requireContext().getResources().getColor(android.R.color.darker_gray, requireContext().getTheme()));
+            return;
+        }
+
+        boolean isIpInList = false;
+        for (String listedIp : ips) {
+            if (isIpInNetwork(listedIp, currentPublicIp)) {
+                isIpInList = true;
+                break;
             }
-
-            @Override
-            public void onError(Exception e) {
-                requireActivity().runOnUiThread(() -> {
-                    currentIpStatusTextView.setText(String.format("Failed to check IP status (%s)", e.getMessage()));
-                    currentIpStatusTextView.setTextColor(requireContext().getResources().getColor(android.R.color.darker_gray, requireContext().getTheme()));
-                });
+        }
+        final boolean finalIsIpInList = isIpInList;
+        requireActivity().runOnUiThread(() -> {
+            if (finalIsIpInList) {
+                currentIpStatusTextView.setText(String.format("Your current IP (%s) is in the Cloudflare group.", currentPublicIp));
+                currentIpStatusTextView.setTextColor(requireContext().getResources().getColor(R.color.status_green, requireContext().getTheme()));
+                currentIpStatusTextView.setBackgroundColor(requireContext().getResources().getColor(android.R.color.transparent, requireContext().getTheme()));
+            } else {
+                currentIpStatusTextView.setText(String.format("Your current IP (%s) is NOT in the Cloudflare group.", currentPublicIp));
+                currentIpStatusTextView.setTextColor(requireContext().getResources().getColor(R.color.black, requireContext().getTheme()));
+                currentIpStatusTextView.setBackgroundColor(requireContext().getResources().getColor(R.color.status_orange, requireContext().getTheme()));
             }
         });
     }
 
     private boolean isIpInNetwork(String cidrNetworkStr, String hostIpStr) {
         try {
-            if (cidrNetworkStr == null || hostIpStr == null) return false;
+            if (cidrNetworkStr == null || hostIpStr == null) {
+                return false;
+            }
             String[] parts = cidrNetworkStr.split("/");
             if (parts.length != 2) {
                 return parts[0].equals(hostIpStr.split("/")[0]);

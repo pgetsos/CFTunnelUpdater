@@ -9,4 +9,5 @@
     <string name="added_ip_successfully">Added IP successfully</string>
     <string name="credential_et_not_found_cannot_save">One or more credential EditTexts not found. Cannot save credentials.</string>
     <string name="settings_saved">Settings Saved!</string>
+    <string name="set_credentials_in_the_settings">Please set credentials in the \'Settings\' tab to fetch IPs.</string>
 </resources>

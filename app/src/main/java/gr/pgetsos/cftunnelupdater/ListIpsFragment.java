@@ -11,6 +11,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.DividerItemDecoration;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -23,8 +24,13 @@ public class ListIpsFragment extends Fragment {
     private TextView emptyText;
     private IPAdapter ipAdapter;
     private List<String> lastFetchedIps = new ArrayList<>();
+    String accountID;
+    String groupID;
+    String apiToken;
     private SettingsManager settingsManager;
     private CloudflareApiHelper cloudflareApiHelper;
+    private CloudflareViewModel cloudflareViewModel;
+
 
     @Nullable
     @Override
@@ -32,9 +38,15 @@ public class ListIpsFragment extends Fragment {
         View view = inflater.inflate(R.layout.list_ips, container, false);
         settingsManager = new SettingsManager(requireContext());
         cloudflareApiHelper = new CloudflareApiHelper();
+        cloudflareViewModel = new ViewModelProvider(requireActivity()).get(CloudflareViewModel.class);
+
         recyclerView = view.findViewById(R.id.ips_recycler);
         emptyText = view.findViewById(R.id.empty_text);
         ipAdapter = new IPAdapter(new ArrayList<>(), this::onIpLongPressed);
+
+        accountID = settingsManager.getAccountId();
+        groupID = settingsManager.getGroupId();
+        apiToken = settingsManager.getApiToken();
 
         LinearLayoutManager layoutManager = new LinearLayoutManager(getContext());
         recyclerView.setLayoutManager(layoutManager);
@@ -42,8 +54,34 @@ public class ListIpsFragment extends Fragment {
         recyclerView.addItemDecoration(dividerItemDecoration);
         recyclerView.setAdapter(ipAdapter);
 
-        fetchAndShowIps();
         return view;
+    }
+
+    @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+
+        cloudflareViewModel.getCloudflareIpsLiveData().observe(getViewLifecycleOwner(), ips -> {
+            if (ips != null) {
+                lastFetchedIps.clear();
+                lastFetchedIps.addAll(ips);
+                updateList(ips);
+            }
+        });
+
+        cloudflareViewModel.getIsLoadingLiveData().observe(getViewLifecycleOwner(), isLoading -> {
+            if (Boolean.TRUE.equals(isLoading)) setEmptyState("Loading IPs...");
+        });
+
+        cloudflareViewModel.getErrorLiveData().observe(getViewLifecycleOwner(), error -> {
+            if (error != null && !error.isEmpty()) {
+                Toast.makeText(getContext(), error, Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        if (!accountID.isEmpty() && !groupID.isEmpty() && !apiToken.isEmpty()){
+            cloudflareViewModel.fetchIps(accountID, groupID, apiToken);
+        }
     }
 
     private void onIpLongPressed(String ip, int pos) {
@@ -58,11 +96,8 @@ public class ListIpsFragment extends Fragment {
     }
 
     private void deleteIpFromCloudflare(String ipToDelete) {
-        String accountID = settingsManager.getAccountId();
-        String groupID = settingsManager.getGroupId();
-        String apiToken = settingsManager.getApiToken();
         if (accountID.isEmpty() || groupID.isEmpty() || apiToken.isEmpty()) {
-            Toast.makeText(getContext(), "Credentials not set.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), "Credentials not set", Toast.LENGTH_SHORT).show();
             return;
         }
         cloudflareApiHelper.deleteIpFromCloudflare(accountID, groupID, apiToken, ipToDelete,
@@ -75,7 +110,7 @@ public class ListIpsFragment extends Fragment {
                             } else {
                                 Toast.makeText(getContext(), "IP not found in the current group.", Toast.LENGTH_SHORT).show();
                             }
-                            fetchAndShowIps();
+                            cloudflareViewModel.refreshIps();
                         });
                     }
 
@@ -85,31 +120,6 @@ public class ListIpsFragment extends Fragment {
                     }
                 }
         );
-    }
-
-    public void fetchAndShowIps() {
-        String accountID = settingsManager.getAccountId();
-        String groupID = settingsManager.getGroupId();
-        String apiToken = settingsManager.getApiToken();
-        if (accountID.isEmpty() || groupID.isEmpty() || apiToken.isEmpty()) {
-            setEmptyState("Please set credentials in the 'Add IP' tab to fetch IPs.");
-            ipAdapter.updateList(new ArrayList<>());
-            return;
-        }
-        cloudflareApiHelper.fetchIpsFromCloudflare(accountID, groupID, apiToken, new CloudflareApiHelper.ApiCallback<List<String>>() {
-            @Override
-            public void onSuccess(List<String> ips) {
-                lastFetchedIps.clear();
-                lastFetchedIps.addAll(ips);
-                updateList(ips);
-            }
-
-            @Override
-            public void onError(Exception e) {
-                setEmptyState("Failed to load IPs. Check connection or credentials.");
-                updateList(new ArrayList<>());
-            }
-        });
     }
 
     private void updateList(List<String> ips) {
