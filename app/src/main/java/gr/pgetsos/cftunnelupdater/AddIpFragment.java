@@ -37,11 +37,9 @@ import java.util.concurrent.atomic.AtomicReference;
 public class AddIpFragment extends Fragment {
     public static final String IP_CHECKER_TYPE_CUSTOM = "CUSTOM";
     public static final String IP_CHECKER_TYPE_IPIFY = "IPIFY";
+    private static final String JSON_PARSE_TAG = "JSON_Parse";
 
     private EditText ipEditText;
-    private EditText customIpCheckerUrlEditText;
-    private SwitchMaterial useCustomIpCheckerSwitch;
-    private TextInputLayout customIpCheckerUrlTil;
     private TextView currentIpStatusTextView;
     private String accountID;
     private String groupID;
@@ -49,7 +47,7 @@ public class AddIpFragment extends Fragment {
     private String currentIpCheckerType;
     private String currentCustomIpCheckerUrl;
     private String ipAddress;
-    private AtomicReference<String> publicIp = new AtomicReference<>();
+    private final AtomicReference<String> publicIp = new AtomicReference<>();
 
     private SettingsManager settingsManager;
     private CloudflareApiHelper cloudflareApiHelper;
@@ -76,9 +74,7 @@ public class AddIpFragment extends Fragment {
             }
         });
 
-        cloudflareViewModel.getIsLoadingLiveData().observe(getViewLifecycleOwner(), isLoading -> {
-            updateCurrentIpStatus();
-        });
+        cloudflareViewModel.getIsLoadingLiveData().observe(getViewLifecycleOwner(), isLoading -> updateCurrentIpStatus());
 
         cloudflareViewModel.getErrorLiveData().observe(getViewLifecycleOwner(), error -> {
             if (error != null && !error.isEmpty()) {
@@ -100,9 +96,9 @@ public class AddIpFragment extends Fragment {
 
         ipEditText = addIpView.findViewById(R.id.ip_et);
         currentIpStatusTextView = addIpView.findViewById(R.id.current_ip_status_tv);
-        useCustomIpCheckerSwitch = addIpView.findViewById(R.id.custom_ip_checker_switch);
-        customIpCheckerUrlTil = addIpView.findViewById(R.id.custom_ip_checker_url_til);
-        customIpCheckerUrlEditText = addIpView.findViewById(R.id.custom_ip_checker_url_et);
+        SwitchMaterial useCustomIpCheckerSwitch = addIpView.findViewById(R.id.custom_ip_checker_switch);
+        TextInputLayout customIpCheckerUrlTil = addIpView.findViewById(R.id.custom_ip_checker_url_til);
+        EditText customIpCheckerUrlEditText = addIpView.findViewById(R.id.custom_ip_checker_url_et);
 
         if (publicIp.get() == null || publicIp.get().isBlank()) {
             getPublicIP();
@@ -129,11 +125,11 @@ public class AddIpFragment extends Fragment {
             }
         });
 
-        Button button = addIpView.findViewById(R.id.add_ip_to_cf_button);
-        Button ipButton = addIpView.findViewById(R.id.ip_button);
+        Button addIpToCfButton = addIpView.findViewById(R.id.add_ip_to_cf_button);
+        Button getIpButton = addIpView.findViewById(R.id.ip_button);
         Button saveSettingsButton = addIpView.findViewById(R.id.save_settings_button);
 
-        button.setOnClickListener(view -> {
+        addIpToCfButton.setOnClickListener(view -> {
             ipAddress = ipEditText.getText().toString();
             if (ipAddress.isBlank()) {
                 Toast.makeText(getContext(), "Please enter an IP address", Toast.LENGTH_SHORT).show();
@@ -154,7 +150,7 @@ public class AddIpFragment extends Fragment {
             Toast.makeText(getContext(), R.string.settings_saved, Toast.LENGTH_SHORT).show();
         });
 
-        ipButton.setOnClickListener(view -> {
+        getIpButton.setOnClickListener(view -> {
             currentCustomIpCheckerUrl = customIpCheckerUrlEditText.getText().toString();
             getPublicIP();
         });
@@ -207,10 +203,7 @@ public class AddIpFragment extends Fragment {
                     @Override
                     public void onSuccess(Boolean ok) {
                         cloudflareViewModel.refreshIps();
-                        requireActivity().runOnUiThread(() -> {
-                            toastUi(getString(R.string.added_ip_successfully));
-//                            updateCurrentIpStatus();
-                        });
+                        requireActivity().runOnUiThread(() -> toastUi(getString(R.string.added_ip_successfully)));
                     }
 
                     @Override
@@ -276,24 +269,24 @@ public class AddIpFragment extends Fragment {
 
     private String readIPFromJSON(String json) {
         Gson gson = new Gson();
-        String ipAddress = null;
+        String extractedIpAddress = null;
         try {
             JsonObject jsonObject = gson.fromJson(json, JsonObject.class);
             if (jsonObject.has("IP")) {
                 JsonElement ipElement = jsonObject.get("IP");
                 if (ipElement != null && !ipElement.isJsonNull()) {
-                    ipAddress = ipElement.getAsString();
-                    Log.d("JSON_Parse", "IP Address from Gson (JsonObject): " + ipAddress);
+                    extractedIpAddress = ipElement.getAsString();
+                    Log.d(JSON_PARSE_TAG, "IP Address from Gson (JsonObject): " + extractedIpAddress);
                 } else {
-                    Log.w("JSON_Parse", "Key 'ip' found but value is null or not a string (Gson JsonObject)");
+                    Log.w(JSON_PARSE_TAG, "Key 'ip' found but value is null or not a string (Gson JsonObject)");
                 }
             } else {
-                Log.w("JSON_Parse", "Key 'IP' not found in JSON response");
+                Log.w(JSON_PARSE_TAG, "Key 'IP' not found in JSON response");
             }
         } catch (JsonSyntaxException e) {
-            Log.e("JSON_Parse", "Error parsing JSON with Gson: " + e.getMessage());
+            Log.e(JSON_PARSE_TAG, "Error parsing JSON with Gson: " + e.getMessage());
         }
-        return ipAddress;
+        return extractedIpAddress;
     }
 
     private boolean isCorrectIPFormat(String ipAddress) {

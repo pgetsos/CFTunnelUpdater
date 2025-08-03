@@ -20,14 +20,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ListIpsFragment extends Fragment {
-    private RecyclerView recyclerView;
     private TextView emptyText;
     private IPAdapter ipAdapter;
-    private List<String> lastFetchedIps = new ArrayList<>();
     String accountID;
     String groupID;
     String apiToken;
-    private SettingsManager settingsManager;
     private CloudflareApiHelper cloudflareApiHelper;
     private CloudflareViewModel cloudflareViewModel;
 
@@ -36,11 +33,11 @@ public class ListIpsFragment extends Fragment {
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.list_ips, container, false);
-        settingsManager = new SettingsManager(requireContext());
+        SettingsManager settingsManager = new SettingsManager(requireContext());
         cloudflareApiHelper = new CloudflareApiHelper();
         cloudflareViewModel = new ViewModelProvider(requireActivity()).get(CloudflareViewModel.class);
 
-        recyclerView = view.findViewById(R.id.ips_recycler);
+        RecyclerView recyclerView = view.findViewById(R.id.ips_recycler);
         emptyText = view.findViewById(R.id.empty_text);
         ipAdapter = new IPAdapter(new ArrayList<>(), this::onIpLongPressed);
 
@@ -63,8 +60,6 @@ public class ListIpsFragment extends Fragment {
 
         cloudflareViewModel.getCloudflareIpsLiveData().observe(getViewLifecycleOwner(), ips -> {
             if (ips != null) {
-                lastFetchedIps.clear();
-                lastFetchedIps.addAll(ips);
                 updateList(ips);
             }
         });
@@ -101,14 +96,14 @@ public class ListIpsFragment extends Fragment {
             return;
         }
         cloudflareApiHelper.deleteIpFromCloudflare(accountID, groupID, apiToken, ipToDelete,
-                new CloudflareApiHelper.ApiCallback<Boolean>() {
+                new CloudflareApiHelper.ApiCallback<>() {
                     @Override
                     public void onSuccess(Boolean deleted) {
                         requireActivity().runOnUiThread(() -> {
-                            if (deleted) {
-                                Toast.makeText(getContext(), "IP " + ipToDelete + " deleted successfully.", Toast.LENGTH_SHORT).show();
+                            if (Boolean.TRUE.equals(deleted)) {
+                                Toast.makeText(getContext(), String.format(getString(R.string.ip_deleted_successfully), ipToDelete), Toast.LENGTH_SHORT).show();
                             } else {
-                                Toast.makeText(getContext(), "IP not found in the current group.", Toast.LENGTH_SHORT).show();
+                                Toast.makeText(getContext(), R.string.ip_not_in_current_group, Toast.LENGTH_SHORT).show();
                             }
                             cloudflareViewModel.refreshIps();
                         });
@@ -116,7 +111,7 @@ public class ListIpsFragment extends Fragment {
 
                     @Override
                     public void onError(Exception e) {
-                        requireActivity().runOnUiThread(() -> Toast.makeText(getContext(), "Deletion failed: " + e.getMessage(), Toast.LENGTH_LONG).show());
+                        requireActivity().runOnUiThread(() -> Toast.makeText(getContext(), String.format(getString(R.string.deletion_failed), e.getMessage()), Toast.LENGTH_LONG).show());
                     }
                 }
         );
@@ -126,10 +121,7 @@ public class ListIpsFragment extends Fragment {
         requireActivity().runOnUiThread(() -> {
             ipAdapter.updateList(ips);
             if (ips.isEmpty()) {
-                emptyText.setVisibility(View.VISIBLE);
-                emptyText.setText(lastFetchedIps.isEmpty()
-                        ? "No IPs present or still loading..."
-                        : emptyText.getText());
+                setEmptyState(getString(R.string.no_ips_present_or_still_loading));
             } else {
                 emptyText.setVisibility(View.GONE);
             }

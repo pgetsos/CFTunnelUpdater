@@ -60,7 +60,6 @@ public class CloudflareViewModel extends ViewModel {
 			public void onError(Exception e) {
 				errorLiveData.postValue("Failed to fetch IPs: " + e.getMessage());
 				isLoadingLiveData.postValue(false);
-				// ipListLiveData.postValue(null);
 			}
 		});
 	}

@@ -24,9 +24,8 @@ public class SettingsFragment extends Fragment {
     private TextInputEditText kvNamespaceIdEditText;
     private TextInputEditText kvApiKeyEditText;
     private SwitchMaterial autoUpdateSwitch;
-    private Button saveButton;
 
-    private SharedPreferences sharedPreferences;
+	private SharedPreferences sharedPreferences;
 
     @Nullable
     @Override
@@ -41,7 +40,7 @@ public class SettingsFragment extends Fragment {
         kvNamespaceIdEditText = view.findViewById(R.id.et_kv_namespace_id);
         kvApiKeyEditText = view.findViewById(R.id.et_kv_api_key);
         autoUpdateSwitch = view.findViewById(R.id.switch_auto_update);
-        saveButton = view.findViewById(R.id.btn_save);
+		Button saveButton = view.findViewById(R.id.btn_save);
 
         loadSettings();
 

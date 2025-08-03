@@ -34,9 +34,6 @@ public class MainActivity extends AppCompatActivity {
 
     private int selectedNavItemId = R.id.nav_add_ip;
     private Fragment activeFragment;
-    private AddIpFragment addIpFragment;
-    private ListIpsFragment listIpsFragment;
-    private SettingsFragment settingsFragment;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,6 +45,10 @@ public class MainActivity extends AppCompatActivity {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
+
+        SettingsFragment settingsFragment;
+        ListIpsFragment listIpsFragment;
+        AddIpFragment addIpFragment;
 
         if (savedInstanceState == null) {
             addIpFragment = new AddIpFragment();

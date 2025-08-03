@@ -10,4 +10,8 @@
     <string name="credential_et_not_found_cannot_save">One or more credential EditTexts not found. Cannot save credentials.</string>
     <string name="settings_saved">Settings Saved!</string>
     <string name="set_credentials_in_the_settings">Please set credentials in the \'Settings\' tab to fetch IPs.</string>
+    <string name="no_ips_present_or_still_loading">No IPs present or still loading...</string>
+    <string name="ip_not_in_current_group">IP not found in the current group.</string>
+    <string name="ip_deleted_successfully">IP %s deleted successfully.</string>
+    <string name="deletion_failed">Deletion failed: %s</string>
 </resources>
