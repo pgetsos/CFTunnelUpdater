@@ -50,7 +50,7 @@ In no particular order, these are things I want to implement someday
 - [x] Deletion of IPs from the app
 - [ ] Expiry date/time for each IP (needs you to re-open the app after that date/time)
 - [ ] Date added of each IP
-- [ ] App icon
+- [x] App icon
 - [ ] Setup instructions inside the app
 - [ ] Publish on F-Droid/Play Store
 - [ ] Auto-adding the current phone IP to the list
