@@ -1,5 +1,6 @@
 package gr.pgetsos.cftunnelupdater;
 
+import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
@@ -29,20 +30,18 @@ public class CloudflareSaveApiClient {
 
     private static final String TAG = "CloudflareSaveApiClient";
 
-    private static final String CF_WORKER_BASE_URL = "https://your-worker-name.your-account.workers.dev"; // TODO: Replace
-    private static final String CF_WORKER_API_KEY = "YOUR_SUPER_SECRET_API_KEY_CHANGE_ME"; // TODO: Replace
     private static final String CF_WORKER_AUTH_HEADER = "X-API-Key";
 
     public static final MediaType JSON = MediaType.get("application/json; charset=utf-8");
 
-    private final OkHttpClient client;
-    private final Gson gson;
+    private final Gson gson = new Gson();
+    private final OkHttpClient client = new OkHttpClient();
     private final Handler mainHandler;
+    private final SettingsManager manager;
 
-    public CloudflareSaveApiClient(OkHttpClient client, Gson gson) {
-        this.client = client;
-        this.gson = gson;
+    public CloudflareSaveApiClient(Context context) {
         this.mainHandler = new Handler(Looper.getMainLooper());
+        manager = new SettingsManager(context);
     }
 
     public String encodeIpForUrlPath(String ipAddress) {
@@ -52,7 +51,9 @@ public class CloudflareSaveApiClient {
 
     public void setIpName(String accountId, String groupId, String ipAddress, String name, @NonNull WorkerApiCallbacks.GenericWorkerApiCallback callback) {
         String encodedIp = encodeIpForUrlPath(ipAddress);
-        String url = CF_WORKER_BASE_URL + "/names/" + accountId + "/" + groupId + "/" + encodedIp;
+        String workerUrl = manager.getWorkerUrl();
+        String workerApiKey = manager.getWorkerApiKey();
+        String url = workerUrl + "/names/" + accountId + "/" + groupId + "/" + encodedIp;
 
         IpNameModels.SetNameRequest setNameRequest = new IpNameModels.SetNameRequest(name);
         String jsonBody = gson.toJson(setNameRequest);
@@ -61,7 +62,7 @@ public class CloudflareSaveApiClient {
         Request request = new Request.Builder()
                 .url(url)
                 .put(body)
-                .addHeader(CF_WORKER_AUTH_HEADER, CF_WORKER_API_KEY)
+                .addHeader(CF_WORKER_AUTH_HEADER, workerApiKey)
                 .build();
 
         client.newCall(request).enqueue(new Callback() {
@@ -74,7 +75,7 @@ public class CloudflareSaveApiClient {
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) {
                 try (ResponseBody responseBody = response.body()) {
-                    String responseBodyString = responseBody != null ? responseBody.string() : "";
+                    String responseBodyString = responseBody.string();
                     if (response.isSuccessful()) {
                         mainHandler.post(() -> callback.onSuccess("Name set successfully"));
                     } else {
@@ -91,12 +92,15 @@ public class CloudflareSaveApiClient {
 
     public void getIpName(String accountId, String groupId, String ipAddress, @NonNull WorkerApiCallbacks.WorkerGetNameApiCallback callback) {
         String encodedIp = encodeIpForUrlPath(ipAddress);
-        String url = CF_WORKER_BASE_URL + "/names/" + accountId + "/" + groupId + "/" + encodedIp;
+        String workerUrl = manager.getWorkerUrl();
+        String workerApiKey = manager.getWorkerApiKey();
+
+        String url = workerUrl + "/names/" + accountId + "/" + groupId + "/" + encodedIp;
 
         Request request = new Request.Builder()
                 .url(url)
                 .get()
-                .addHeader(CF_WORKER_AUTH_HEADER, CF_WORKER_API_KEY)
+                .addHeader(CF_WORKER_AUTH_HEADER, workerApiKey)
                 .build();
 
         client.newCall(request).enqueue(new Callback() {
@@ -109,7 +113,7 @@ public class CloudflareSaveApiClient {
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) {
                 try (ResponseBody responseBody = response.body()) {
-                    String responseBodyString = responseBody != null ? responseBody.string() : "";
+                    String responseBodyString = responseBody.string();
                     if (response.isSuccessful()) {
                         try {
                             IpNameModels.GetNameResponse getNameResponse = gson.fromJson(responseBodyString, IpNameModels.GetNameResponse.class);
@@ -135,12 +139,15 @@ public class CloudflareSaveApiClient {
 
     public void deleteIpName(String accountId, String groupId, String ipAddress, @NonNull WorkerApiCallbacks.GenericWorkerApiCallback callback) {
         String encodedIp = encodeIpForUrlPath(ipAddress);
-        String url = CF_WORKER_BASE_URL + "/names/" + accountId + "/" + groupId + "/" + encodedIp;
+        String workerUrl = manager.getWorkerUrl();
+        String workerApiKey = manager.getWorkerApiKey();
+
+        String url = workerUrl + "/names/" + accountId + "/" + groupId + "/" + encodedIp;
 
         Request request = new Request.Builder()
                 .url(url)
                 .delete()
-                .addHeader(CF_WORKER_AUTH_HEADER, CF_WORKER_API_KEY)
+                .addHeader(CF_WORKER_AUTH_HEADER, workerApiKey)
                 .build();
 
         client.newCall(request).enqueue(new Callback() {
@@ -153,7 +160,7 @@ public class CloudflareSaveApiClient {
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) {
                 try (ResponseBody responseBody = response.body()) {
-                    String responseBodyString = responseBody != null ? responseBody.string() : "";
+                    String responseBodyString = responseBody.string();
                     if (response.isSuccessful()) {
                         mainHandler.post(() -> callback.onSuccess("Name deleted successfully"));
                     } else {
@@ -169,12 +176,15 @@ public class CloudflareSaveApiClient {
     }
 
     public void getAllIpNamesForGroup(String accountId, String groupId, @NonNull WorkerApiCallbacks.WorkerGetAllNamesApiCallback callback) {
-        String url = CF_WORKER_BASE_URL + "/names/" + accountId + "/" + groupId;
+        String workerUrl = manager.getWorkerUrl();
+        String workerApiKey = manager.getWorkerApiKey();
+
+        String url = workerUrl + "/names/" + accountId + "/" + groupId;
 
         Request request = new Request.Builder()
                 .url(url)
                 .get()
-                .addHeader(CF_WORKER_AUTH_HEADER, CF_WORKER_API_KEY)
+                .addHeader(CF_WORKER_AUTH_HEADER, workerApiKey)
                 .build();
 
         client.newCall(request).enqueue(new Callback() {
@@ -187,7 +197,7 @@ public class CloudflareSaveApiClient {
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) {
                 try (ResponseBody responseBody = response.body()) {
-                    String responseBodyString = responseBody != null ? responseBody.string() : "";
+                    String responseBodyString = responseBody.string();
                     if (response.isSuccessful()) {
                         try {
                             Type type = new TypeToken<Map<String, String>>() {}.getType();

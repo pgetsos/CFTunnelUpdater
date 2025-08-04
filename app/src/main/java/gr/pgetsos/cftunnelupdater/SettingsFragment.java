@@ -1,7 +1,5 @@
 package gr.pgetsos.cftunnelupdater;
 
-import android.content.Context;
-import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -16,29 +14,31 @@ import androidx.fragment.app.Fragment;
 import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.google.android.material.textfield.TextInputEditText;
 
+import java.util.Objects;
+
 public class SettingsFragment extends Fragment {
 
     private TextInputEditText accessGroupIdEditText;
     private TextInputEditText accessGroupKeyEditText;
     private TextInputEditText accountIdEditText;
-    private TextInputEditText kvNamespaceIdEditText;
-    private TextInputEditText kvApiKeyEditText;
+    private TextInputEditText cfWorkerUrlEditText;
+    private TextInputEditText workerApiKeyEditText;
     private SwitchMaterial autoUpdateSwitch;
 
-	private SharedPreferences sharedPreferences;
+    private SettingsManager settingsManager;
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_settings, container, false);
 
-        sharedPreferences = requireActivity().getSharedPreferences(SettingsManager.PREFS_NAME, Context.MODE_PRIVATE);
+        settingsManager = new SettingsManager(requireContext());
 
+        accountIdEditText = view.findViewById(R.id.et_account_id);
         accessGroupIdEditText = view.findViewById(R.id.et_access_group_id);
         accessGroupKeyEditText = view.findViewById(R.id.et_access_group_key);
-        accountIdEditText = view.findViewById(R.id.et_account_id);
-        kvNamespaceIdEditText = view.findViewById(R.id.et_kv_namespace_id);
-        kvApiKeyEditText = view.findViewById(R.id.et_kv_api_key);
+        cfWorkerUrlEditText = view.findViewById(R.id.et_cf_worker_url);
+        workerApiKeyEditText = view.findViewById(R.id.et_worker_api_key);
         autoUpdateSwitch = view.findViewById(R.id.switch_auto_update);
 		Button saveButton = view.findViewById(R.id.btn_save);
 
@@ -50,23 +50,25 @@ public class SettingsFragment extends Fragment {
     }
 
     private void loadSettings() {
-        accessGroupIdEditText.setText(sharedPreferences.getString(SettingsManager.PREF_GROUP_ID, ""));
-        accessGroupKeyEditText.setText(sharedPreferences.getString(SettingsManager.PREF_ACCESS_GROUP_KEY, ""));
-        accountIdEditText.setText(sharedPreferences.getString(SettingsManager.PREF_ACCOUNT_ID, ""));
-        kvNamespaceIdEditText.setText(sharedPreferences.getString(SettingsManager.PREF_KV_NAMESPACE_ID, ""));
-        kvApiKeyEditText.setText(sharedPreferences.getString(SettingsManager.PREF_KV_API_KEY, ""));
-        autoUpdateSwitch.setChecked(sharedPreferences.getBoolean(SettingsManager.PREF_AUTO_UPDATE_ENABLED, false));
+        accessGroupIdEditText.setText(settingsManager.getGroupId());
+        accessGroupKeyEditText.setText(settingsManager.getApiToken());
+        accountIdEditText.setText(settingsManager.getAccountId());
+        cfWorkerUrlEditText.setText(settingsManager.getWorkerUrl());
+        workerApiKeyEditText.setText(settingsManager.getWorkerApiKey());
+        autoUpdateSwitch.setChecked(settingsManager.isAutoUpdateEnabled());
     }
 
     private void saveSettings() {
-        SharedPreferences.Editor editor = sharedPreferences.edit();
-        editor.putString(SettingsManager.PREF_GROUP_ID, accessGroupIdEditText.getText().toString());
-        editor.putString(SettingsManager.PREF_ACCESS_GROUP_KEY, accessGroupKeyEditText.getText().toString());
-        editor.putString(SettingsManager.PREF_ACCOUNT_ID, accountIdEditText.getText().toString());
-        editor.putString(SettingsManager.PREF_KV_NAMESPACE_ID, kvNamespaceIdEditText.getText().toString());
-        editor.putString(SettingsManager.PREF_KV_API_KEY, kvApiKeyEditText.getText().toString());
-        editor.putBoolean(SettingsManager.PREF_AUTO_UPDATE_ENABLED, autoUpdateSwitch.isChecked());
-        editor.apply();
+        String accountId = Objects.requireNonNull(accountIdEditText.getText()).toString();
+        String accessGroupId = Objects.requireNonNull(accessGroupIdEditText.getText()).toString();
+        String accessGroupKey = Objects.requireNonNull(accessGroupKeyEditText.getText()).toString();
+        String cfWorkerUrl = Objects.requireNonNull(cfWorkerUrlEditText.getText()).toString();
+        String workerApiKey = Objects.requireNonNull(workerApiKeyEditText.getText()).toString();
+        boolean autoUpdateEnabled = autoUpdateSwitch.isChecked();
+
+
+        settingsManager.saveAll(accountId, accessGroupId, accessGroupKey, cfWorkerUrl,
+                workerApiKey, autoUpdateEnabled);
 
         if (autoUpdateSwitch.isChecked()) {
             ((MainActivity) requireActivity()).schedulePublicIpMonitor();

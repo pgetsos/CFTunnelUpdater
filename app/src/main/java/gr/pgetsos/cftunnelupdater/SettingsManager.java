@@ -12,9 +12,8 @@ public class SettingsManager {
     public static final String PREF_IP_CHECKER_TYPE = "ipCheckerType";
     public static final String PREF_CUSTOM_IP_CHECKER_URL = "customIpCheckerUrl";
     public static final String PREF_AUTO_UPDATE_ENABLED = "autoUpdateEnabled";
-    public static final String PREF_KV_ACCOUNT_ID = "kvAccountId";
-    public static final String PREF_KV_NAMESPACE_ID = "kvNamespaceId";
-    public static final String PREF_KV_API_KEY = "kvApiKey";
+    public static final String PREF_CF_WORKER_URL = "cfWorkerURL";
+    public static final String PREF_CF_WORKER_API_KEY = "cfWorkerAPI";
 
     private final SharedPreferences prefs;
 
@@ -62,13 +61,40 @@ public class SettingsManager {
         prefs.edit().putString(PREF_CUSTOM_IP_CHECKER_URL, url).apply();
     }
 
-    public void saveAll(String accountId, String groupId, String apiToken, String ipCheckerType, String customIpCheckerUrl) {
+    public String getWorkerUrl() {
+        return prefs.getString(PREF_CF_WORKER_URL, "");
+    }
+
+    public void setWorkerUrl(String url) {
+        prefs.edit().putString(PREF_CF_WORKER_URL, url).apply();
+    }
+
+    public String getWorkerApiKey() {
+        return prefs.getString(PREF_CF_WORKER_API_KEY, "");
+    }
+
+    public void setWorkerApiKey(String url) {
+        prefs.edit().putString(PREF_CF_WORKER_API_KEY, url).apply();
+    }
+
+    public boolean isAutoUpdateEnabled() {
+        return prefs.getBoolean(PREF_AUTO_UPDATE_ENABLED, false);
+    }
+
+    public void setAutoUpdateEnabled(boolean enabled) {
+        prefs.edit().putBoolean(PREF_AUTO_UPDATE_ENABLED, enabled).apply();
+    }
+
+    public void saveAll(String accountId, String groupId, String accessGroupKey,
+                        String cfWorkerUrl, String workerApiKey, boolean autoUpdateEnabled) {
         SharedPreferences.Editor editor = prefs.edit();
         editor.putString(PREF_ACCOUNT_ID, accountId);
         editor.putString(PREF_GROUP_ID, groupId);
-        editor.putString(PREF_ACCESS_GROUP_KEY, apiToken);
-        editor.putString(PREF_IP_CHECKER_TYPE, ipCheckerType);
-        editor.putString(PREF_CUSTOM_IP_CHECKER_URL, customIpCheckerUrl);
+        editor.putString(PREF_ACCESS_GROUP_KEY, accessGroupKey);
+        editor.putString(PREF_CF_WORKER_URL, cfWorkerUrl);
+        editor.putString(PREF_CF_WORKER_API_KEY, workerApiKey);
+        editor.putBoolean(PREF_AUTO_UPDATE_ENABLED, autoUpdateEnabled);
+
         editor.apply();
     }
 }
