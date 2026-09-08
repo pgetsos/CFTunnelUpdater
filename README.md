@@ -28,25 +28,48 @@ Then, when you open the app, it fills the IP input with the current IP your phon
 
 Clicking "Add IP to CF" should add the IP to your Group, and give it access to your Applications behind the tunnel. A small Toast will appear on success! Each IP can be added only once, so don't worry about spaming the same IP multiple times in the Group!
 
-# How to add sync capability
-The app uses the Cloudflare Workers and KV store to provide the ability for synchronization of IP names, creation datetime and expiration datetime (when these are implemented).
-You have to provide your own API key and create the Worker and KV Store. To do this:
+# Optional IP names and sync
 
-- Navigate to https://dash.cloudflare.com/?to=/:account/workers/kv/namespaces
-- Create a new KV Store, name it (let's say kv-cfupdater) and click Add
-- Navigate to Workers & Pages (https://dash.cloudflare.com/?to=/:account/workers-and-pages), create a new Worker (if it is the first one, click to create the Hello World one)
-- Give a name to the worker, preferably kv_cfupdater, and click Deploy
-- Click Edit code after deployment, delete the default code, and add the code in the worker.js of this repository. REMEMBER TO CHANGE THE API KEY, and also change the kv store name in the code if you choose something other than kv_cfupdater
-- Save and deploy
-- Go to the Worker page, Bindings, Add binding, choose KV from the list, add the name kv_cfupdater and choose the kv-cfupdater from the list of KV namespaces. Save
+Enter an optional name when adding an IP. In the IP list, tap a row to add,
+change, or clear its name; hold a row to delete the IP. Blank names on the Add
+screen leave an existing name unchanged. Names belong to the IP/range within
+one account and Access group. IPv6 entries added without a prefix retain the
+app's existing /64 behavior, so their name describes that range.
 
+Without Worker settings, names are saved on this phone. For names shared across
+phones, use the included Cloudflare Worker and KV store:
 
+1. Create a KV namespace in Cloudflare (for example `kv-cfupdater`).
+2. Create a Worker and deploy the code from **CFWorker.js** in this repository.
+3. Add a KV binding named **kv_cfupdater**, pointing to that namespace.
+4. Add an encrypted Worker secret named **API_SECRET**, with a strong random value.
+   The Worker refuses requests if this secret is missing. Existing deployments
+   that used a hardcoded secret must configure this secret when upgrading.
+5. In the app's Settings, save the Worker HTTPS URL and use that secret as the
+   Worker API key. This key is separate from the Cloudflare Access API token.
+6. On each phone, use the same Worker URL/key and Cloudflare account/group IDs,
+   with a Cloudflare API token allowed to access that group.
+
+Open the IP list or tap **Refresh IPs and names** to fetch shared names. KV is
+[eventually consistent](https://developers.cloudflare.com/kv/concepts/how-kv-works/):
+changes can take 60 seconds or more to reach another location. Concurrent edits
+to the same name use the last write received by KV. Access rules remain in
+Cloudflare Access; KV stores only labels.
+
+Local-only names and each Worker's cached names are separate. After enabling
+sync, re-enter any local names you want to share. Failed remote saves are reported
+and can be retried; there is no background upload queue. A failed name sync does
+not prevent viewing IPs or changing access. Deleting an IP also attempts to delete
+its label; a label cleanup failure is reported separately.
+
+Anyone with the Worker key can read and edit labels for groups stored in that
+Worker. Share it only with the phones that should have this access.
 
 # Roadmap
 In no particular order, these are things I want to implement someday
 - [ ] Create release (and automate it, maybe)
 - [x] List with all IPs right now in the Group
-- [ ] A name for each IP added through the app
+- [x] Optional names for IPs, with Worker/KV sync
 - [x] Deletion of IPs from the app
 - [ ] Expiry date/time for each IP (needs you to re-open the app after that date/time)
 - [ ] Date added of each IP

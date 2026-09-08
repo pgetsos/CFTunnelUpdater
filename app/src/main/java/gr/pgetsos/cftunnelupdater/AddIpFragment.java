@@ -16,11 +16,8 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.google.android.material.switchmaterial.SwitchMaterial;
+import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
-import com.google.gson.Gson;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonSyntaxException;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
@@ -29,17 +26,23 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.URL;
 import java.net.UnknownHostException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.Scanner;
 import java.util.concurrent.atomic.AtomicReference;
+
+import gr.pgetsos.cftunnelupdater.utils.NetworkUtils;
 
 public class AddIpFragment extends Fragment {
     public static final String IP_CHECKER_TYPE_CUSTOM = "CUSTOM";
     public static final String IP_CHECKER_TYPE_IPIFY = "IPIFY";
-    private static final String JSON_PARSE_TAG = "JSON_Parse";
 
     private EditText ipEditText;
+    private TextInputEditText ipNameEditText;
     private TextView currentIpStatusTextView;
     private String accountID;
     private String groupID;
@@ -53,12 +56,14 @@ public class AddIpFragment extends Fragment {
     private CloudflareApiHelper cloudflareApiHelper;
     private CloudflareViewModel cloudflareViewModel;
 
+
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_add_ip, container, false);
         settingsManager = new SettingsManager(requireContext());
         cloudflareApiHelper = new CloudflareApiHelper();
+
         cloudflareViewModel = new ViewModelProvider(requireActivity()).get(CloudflareViewModel.class);
         setupViews(view);
         return view;
@@ -87,6 +92,18 @@ public class AddIpFragment extends Fragment {
         }
     }
 
+    @Override
+    public void onHiddenChanged(boolean hidden) {
+        super.onHiddenChanged(hidden);
+        if (!hidden && settingsManager != null) {
+            accountID = settingsManager.getAccountId();
+            groupID = settingsManager.getGroupId();
+            apiToken = settingsManager.getApiToken();
+            if (!accountID.isEmpty() && !groupID.isEmpty() && !apiToken.isEmpty())
+                cloudflareViewModel.fetchIps(accountID, groupID, apiToken);
+        }
+    }
+
     private void setupViews(View addIpView) {
         accountID = settingsManager.getAccountId();
         groupID = settingsManager.getGroupId();
@@ -95,6 +112,7 @@ public class AddIpFragment extends Fragment {
         currentCustomIpCheckerUrl = settingsManager.getCustomIpCheckerUrl();
 
         ipEditText = addIpView.findViewById(R.id.ip_et);
+        ipNameEditText = addIpView.findViewById(R.id.ipNameEditText);
         currentIpStatusTextView = addIpView.findViewById(R.id.current_ip_status_tv);
         SwitchMaterial useCustomIpCheckerSwitch = addIpView.findViewById(R.id.custom_ip_checker_switch);
         TextInputLayout customIpCheckerUrlTil = addIpView.findViewById(R.id.custom_ip_checker_url_til);
@@ -157,6 +175,12 @@ public class AddIpFragment extends Fragment {
     }
 
     private void addCurrentIpToGroup() {
+        final String submittedIp = ipAddress.trim();
+        final String submittedName = ipNameEditText.getText() == null ? "" : ipNameEditText.getText().toString().trim();
+        final IpNameStore names = new IpNameStore(requireContext());
+        if (submittedName.length() > 100) { toastUi("Names can contain up to 100 characters."); return; }
+        try { IpNameKey.of(submittedIp); }
+        catch (IllegalArgumentException e) { toastUi(e.getMessage()); return; }
         cloudflareApiHelper.getCurrentGroup(accountID, groupID, apiToken, new CloudflareApiHelper.ApiCallback<AccessGroupResponse>() {
             @Override
             public void onSuccess(AccessGroupResponse response) {
@@ -164,15 +188,15 @@ public class AddIpFragment extends Fragment {
                 AccessGroupResponse.Ip newIp = new AccessGroupResponse.Ip();
                 InetAddress address = null;
                 try {
-                    address = InetAddress.getByName(ipAddress);
+                    address = InetAddress.getByName(submittedIp.split("/")[0]);
                 } catch (UnknownHostException e) {
                     toastUi("Invalid IP address");
                     return;
                 }
                 if (address instanceof Inet6Address) {
-                    newIp.ip = ipAddress + "/64";
+                    newIp.ip = submittedIp.contains("/") ? submittedIp : submittedIp + "/64";
                 } else if (address instanceof Inet4Address) {
-                    newIp.ip = ipAddress + "/32";
+                    newIp.ip = submittedIp.contains("/") ? submittedIp : submittedIp + "/32";
                 } else {
                     toastUi("Unknown IP address type");
                     return;
@@ -189,7 +213,7 @@ public class AddIpFragment extends Fragment {
                 for (AccessGroupResponse.IncludeItem element : response.result.include) {
                     boolean found = false;
                     for (AccessGroupResponse.IncludeItem newItem : newList) {
-                        if (newItem.ip != null && newItem.ip.ip != null && isIpInNetwork(element.ip.ip, newItem.ip.ip)) {
+                        if (element.ip != null && element.ip.ip != null && newItem.ip != null && newItem.ip.ip != null && IpNameKey.of(element.ip.ip).equals(IpNameKey.of(newItem.ip.ip))) {
                             found = true;
                             break;
                         }
@@ -203,7 +227,14 @@ public class AddIpFragment extends Fragment {
                     @Override
                     public void onSuccess(Boolean ok) {
                         cloudflareViewModel.refreshIps();
-                        requireActivity().runOnUiThread(() -> toastUi(getString(R.string.added_ip_successfully)));
+                        toastUi("IP added successfully.");
+
+                        if (!submittedName.isEmpty()) {
+                            names.save(newIp.ip, submittedName, new WorkerApiCallbacks.GenericWorkerApiCallback() {
+                                public void onSuccess(String message) { toastUi(message); }
+                                public void onError(String error) { toastUi("IP added, but name was not saved: " + error); }
+                            });
+                        }
                     }
 
                     @Override
@@ -239,17 +270,29 @@ public class AddIpFragment extends Fragment {
 
                 try (Scanner s = new Scanner(connection.getInputStream(), "UTF-8").useDelimiter("\\A")) {
                     if (s.hasNext()) {
+                        String responseBody = s.next();
                         if (IP_CHECKER_TYPE_IPIFY.equals(currentIpCheckerType)) {
-                            publicIp.set(s.next());
+                            publicIp.set(responseBody);
                         } else {
-                            publicIp.set(readIPFromJSON(s.next()));
+                            publicIp.set(NetworkUtils.extractIpAddressFromJson(responseBody));
                         }
                     } else {
                         throw new IOException("No content received from IP checker.");
                     }
                 }
 
-                if (!isCorrectIPFormat(publicIp.get())) {
+                if (publicIp.get() == null || publicIp.get().trim().isEmpty()) {
+                    if (IP_CHECKER_TYPE_CUSTOM.equals(currentIpCheckerType)) {
+                        toastUi(getString(R.string.failed_to_parse_ip_from_custom_url));
+                    } else {
+                        toastUi(getString(R.string.failed_to_fetch_public_ip));
+                    }
+                    return;
+                }
+
+                if (!NetworkUtils.isCorrectIPFormat(publicIp.get())) {
+                    final String errorMsg = String.format(getString(R.string.invalid_ip_address_format_received_s), publicIp.get());
+                    toastUi(errorMsg);
                     return;
                 }
 
@@ -265,43 +308,6 @@ public class AddIpFragment extends Fragment {
                 toastUi("Could not fetch public IP");
             }
         }).start();
-    }
-
-    private String readIPFromJSON(String json) {
-        Gson gson = new Gson();
-        String extractedIpAddress = null;
-        try {
-            JsonObject jsonObject = gson.fromJson(json, JsonObject.class);
-            if (jsonObject.has("IP")) {
-                JsonElement ipElement = jsonObject.get("IP");
-                if (ipElement != null && !ipElement.isJsonNull()) {
-                    extractedIpAddress = ipElement.getAsString();
-                    Log.d(JSON_PARSE_TAG, "IP Address from Gson (JsonObject): " + extractedIpAddress);
-                } else {
-                    Log.w(JSON_PARSE_TAG, "Key 'ip' found but value is null or not a string (Gson JsonObject)");
-                }
-            } else {
-                Log.w(JSON_PARSE_TAG, "Key 'IP' not found in JSON response");
-            }
-        } catch (JsonSyntaxException e) {
-            Log.e(JSON_PARSE_TAG, "Error parsing JSON with Gson: " + e.getMessage());
-        }
-        return extractedIpAddress;
-    }
-
-    private boolean isCorrectIPFormat(String ipAddress) {
-        if (ipAddress == null) {
-            return false;
-        }
-        try {
-            java.net.InetAddress.getByName(ipAddress.split("/")[0]);
-            return true;
-        } catch (java.net.UnknownHostException e) {
-            final String errorMsg = String.format(getString(R.string.invalid_ip_address_format_received_s), ipAddress);
-            Log.e("GetPublicIP", errorMsg, e);
-            toastUi(errorMsg);
-            return false;
-        }
     }
 
     private void updateCurrentIpStatus() {
@@ -346,7 +352,7 @@ public class AddIpFragment extends Fragment {
 
         boolean isIpInList = false;
         for (String listedIp : ips) {
-            if (isIpInNetwork(listedIp, currentPublicIp)) {
+            if (NetworkUtils.isIpInNetwork(listedIp, currentPublicIp)) {
                 isIpInList = true;
                 break;
             }
@@ -365,50 +371,9 @@ public class AddIpFragment extends Fragment {
         });
     }
 
-    private boolean isIpInNetwork(String cidrNetworkStr, String hostIpStr) {
-        try {
-            if (cidrNetworkStr == null || hostIpStr == null) {
-                return false;
-            }
-            String[] parts = cidrNetworkStr.split("/");
-            if (parts.length != 2) {
-                return parts[0].equals(hostIpStr.split("/")[0]);
-            }
-            String networkAddressStr = parts[0];
-            int prefixLength = Integer.parseInt(parts[1]);
-            InetAddress networkAddress = InetAddress.getByName(networkAddressStr);
-            InetAddress hostAddress = InetAddress.getByName(hostIpStr.split("/")[0]); // Remove CIDR if present
-            if (networkAddress.getClass() != hostAddress.getClass()) {
-                return false;
-            }
-            byte[] networkBytes = networkAddress.getAddress();
-            byte[] hostBytes = hostAddress.getAddress();
-            byte[] maskBytes = new byte[networkBytes.length];
-            for (int i = 0; i < maskBytes.length; i++) {
-                if (prefixLength > 8) {
-                    maskBytes[i] = (byte) 0xFF;
-                    prefixLength -= 8;
-                } else if (prefixLength > 0) {
-                    maskBytes[i] = (byte) ((0xFF << (8 - prefixLength)) & 0xFF);
-                    prefixLength = 0;
-                } else {
-                    maskBytes[i] = (byte) 0x00;
-                }
-            }
-            byte[] maskedNetwork = new byte[networkBytes.length];
-            byte[] maskedHost = new byte[hostBytes.length];
-            for (int i = 0; i < networkBytes.length; i++) {
-                maskedNetwork[i] = (byte) (networkBytes[i] & maskBytes[i]);
-                maskedHost[i] = (byte) (hostBytes[i] & maskBytes[i]);
-            }
-            return java.util.Arrays.equals(maskedNetwork, maskedHost);
-        } catch (Exception e) {
-            Log.e("IPNetworkCheck", String.format("Error checking if IP %s is in network %s", hostIpStr, cidrNetworkStr), e);
-            return false;
-        }
-    }
-
     private void toastUi(String s) {
-            requireActivity().runOnUiThread(() -> Toast.makeText(getContext(), s, Toast.LENGTH_SHORT).show());
+        if (getActivity() != null) getActivity().runOnUiThread(() -> {
+            if (getContext() != null) Toast.makeText(getContext(), s, Toast.LENGTH_SHORT).show();
+        });
     }
 }

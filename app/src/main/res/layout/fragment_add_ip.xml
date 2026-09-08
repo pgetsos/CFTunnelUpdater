@@ -76,6 +76,25 @@
         app:layout_constraintEnd_toEndOf="parent"
         tools:text="Current IP status will appear here." />
 
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/ipNameEditTextLayout"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:hint="IP Name (Optional)"
+        app:layout_constraintTop_toBottomOf="@id/current_ip_status_tv"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/ipNameEditText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="textCapWords"
+            android:maxLines="1"/>
+    </com.google.android.material.textfield.TextInputLayout>
+
     <!-- Save Button -->
     <Button
         android:id="@+id/save_settings_button"
@@ -83,7 +102,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:text="Save Settings"
-        app:layout_constraintTop_toBottomOf="@id/current_ip_status_tv"
+        app:layout_constraintTop_toBottomOf="@id/ipNameEditTextLayout"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintBottom_toTopOf="@id/add_ip_to_cf_button"

@@ -15,8 +15,8 @@ import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.Collections;
 import java.util.Map;
-import java.util.Objects;
 
+import okhttp3.HttpUrl;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.MediaType;
@@ -44,16 +44,29 @@ public class CloudflareSaveApiClient {
         manager = new SettingsManager(context);
     }
 
+    private String workerEndpoint(String account, String group, String ip) {
+        String base = manager.getWorkerUrl().trim();
+        HttpUrl parsed = HttpUrl.parse(base);
+        if (parsed == null || !parsed.isHttps() || manager.getWorkerApiKey().trim().isEmpty()) return null;
+        HttpUrl.Builder builder = parsed.newBuilder().query(null).fragment(null);
+        while (builder.build().encodedPath().endsWith("/")) {
+            builder.removePathSegment(builder.build().pathSize() - 1);
+            if (builder.build().encodedPath().equals("/")) break;
+        }
+        builder.addPathSegment("names").addPathSegment(account).addPathSegment(group);
+        if (ip != null) builder.addPathSegment(encodeIpForUrlPath(ip));
+        return builder.build().toString();
+    }
+
     public String encodeIpForUrlPath(String ipAddress) {
         if (ipAddress == null) return "";
         return ipAddress.replace(".", "_").replace(":", "-");
     }
 
     public void setIpName(String accountId, String groupId, String ipAddress, String name, @NonNull WorkerApiCallbacks.GenericWorkerApiCallback callback) {
-        String encodedIp = encodeIpForUrlPath(ipAddress);
-        String workerUrl = manager.getWorkerUrl();
         String workerApiKey = manager.getWorkerApiKey();
-        String url = workerUrl + "/names/" + accountId + "/" + groupId + "/" + encodedIp;
+        String url = workerEndpoint(accountId, groupId, ipAddress);
+        if (url == null) { callback.onError("Set an HTTPS Worker URL and Worker API key in Settings."); return; }
 
         IpNameModels.SetNameRequest setNameRequest = new IpNameModels.SetNameRequest(name);
         String jsonBody = gson.toJson(setNameRequest);
@@ -75,7 +88,7 @@ public class CloudflareSaveApiClient {
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) {
                 try (ResponseBody responseBody = response.body()) {
-                    String responseBodyString = responseBody.string();
+                    String responseBodyString = responseBody != null ? responseBody.string() : "";
                     if (response.isSuccessful()) {
                         mainHandler.post(() -> callback.onSuccess("Name set successfully"));
                     } else {
@@ -91,11 +104,10 @@ public class CloudflareSaveApiClient {
     }
 
     public void getIpName(String accountId, String groupId, String ipAddress, @NonNull WorkerApiCallbacks.WorkerGetNameApiCallback callback) {
-        String encodedIp = encodeIpForUrlPath(ipAddress);
-        String workerUrl = manager.getWorkerUrl();
         String workerApiKey = manager.getWorkerApiKey();
 
-        String url = workerUrl + "/names/" + accountId + "/" + groupId + "/" + encodedIp;
+        String url = workerEndpoint(accountId, groupId, ipAddress);
+        if (url == null) { callback.onError("Set an HTTPS Worker URL and Worker API key in Settings."); return; }
 
         Request request = new Request.Builder()
                 .url(url)
@@ -113,7 +125,7 @@ public class CloudflareSaveApiClient {
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) {
                 try (ResponseBody responseBody = response.body()) {
-                    String responseBodyString = responseBody.string();
+                    String responseBodyString = responseBody != null ? responseBody.string() : "";
                     if (response.isSuccessful()) {
                         try {
                             IpNameModels.GetNameResponse getNameResponse = gson.fromJson(responseBodyString, IpNameModels.GetNameResponse.class);
@@ -138,11 +150,10 @@ public class CloudflareSaveApiClient {
     }
 
     public void deleteIpName(String accountId, String groupId, String ipAddress, @NonNull WorkerApiCallbacks.GenericWorkerApiCallback callback) {
-        String encodedIp = encodeIpForUrlPath(ipAddress);
-        String workerUrl = manager.getWorkerUrl();
         String workerApiKey = manager.getWorkerApiKey();
 
-        String url = workerUrl + "/names/" + accountId + "/" + groupId + "/" + encodedIp;
+        String url = workerEndpoint(accountId, groupId, ipAddress);
+        if (url == null) { callback.onError("Set an HTTPS Worker URL and Worker API key in Settings."); return; }
 
         Request request = new Request.Builder()
                 .url(url)
@@ -160,7 +171,7 @@ public class CloudflareSaveApiClient {
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) {
                 try (ResponseBody responseBody = response.body()) {
-                    String responseBodyString = responseBody.string();
+                    String responseBodyString = responseBody != null ? responseBody.string() : "";
                     if (response.isSuccessful()) {
                         mainHandler.post(() -> callback.onSuccess("Name deleted successfully"));
                     } else {
@@ -176,10 +187,10 @@ public class CloudflareSaveApiClient {
     }
 
     public void getAllIpNamesForGroup(String accountId, String groupId, @NonNull WorkerApiCallbacks.WorkerGetAllNamesApiCallback callback) {
-        String workerUrl = manager.getWorkerUrl();
         String workerApiKey = manager.getWorkerApiKey();
 
-        String url = workerUrl + "/names/" + accountId + "/" + groupId;
+        String url = workerEndpoint(accountId, groupId, null);
+        if (url == null) { callback.onError("Set an HTTPS Worker URL and Worker API key in Settings."); return; }
 
         Request request = new Request.Builder()
                 .url(url)
@@ -197,7 +208,7 @@ public class CloudflareSaveApiClient {
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) {
                 try (ResponseBody responseBody = response.body()) {
-                    String responseBodyString = responseBody.string();
+                    String responseBodyString = responseBody != null ? responseBody.string() : "";
                     if (response.isSuccessful()) {
                         try {
                             Type type = new TypeToken<Map<String, String>>() {}.getType();

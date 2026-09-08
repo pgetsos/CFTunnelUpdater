@@ -12,7 +12,8 @@ public class CloudflareViewModel extends ViewModel {
 	private final MutableLiveData<Boolean> isLoadingLiveData = new MutableLiveData<>();
 	private final MutableLiveData<String> errorLiveData = new MutableLiveData<>();
 
-	private boolean hasFetchedOnce = false;
+	private volatile boolean hasFetchedOnce = false;
+	private volatile int generation;
 	private String currentAccountId;
 	private String currentGroupId;
 	private String currentApiToken;
@@ -43,6 +44,7 @@ public class CloudflareViewModel extends ViewModel {
 			return;
 		}
 
+		final int request = ++generation;
 		this.currentAccountId = accountID;
 		this.currentGroupId = groupID;
 		this.currentApiToken = apiToken;
@@ -51,6 +53,7 @@ public class CloudflareViewModel extends ViewModel {
 		cloudflareApiHelper.fetchIpsFromCloudflare(accountID, groupID, apiToken, new CloudflareApiHelper.ApiCallback<>() {
 			@Override
 			public void onSuccess(List<String> ips) {
+				if (request != generation) return;
 				cloudflareIpsLiveData.postValue(ips);
 				isLoadingLiveData.postValue(false);
 				hasFetchedOnce = true;
@@ -58,10 +61,16 @@ public class CloudflareViewModel extends ViewModel {
 
 			@Override
 			public void onError(Exception e) {
+				if (request != generation) return;
 				errorLiveData.postValue("Failed to fetch IPs: " + e.getMessage());
 				isLoadingLiveData.postValue(false);
 			}
 		});
+	}
+
+	public void refreshIps(String account, String group, String token) {
+		hasFetchedOnce = false;
+		fetchIps(account, group, token);
 	}
 
 	public void refreshIps() {

@@ -6,7 +6,7 @@
 // For this example, we'll assume the binding is named: kv_cfupdater
 
 // Secret for simple API key authentication (change this to a strong, unique secret)
-const API_SECRET = "YOUR_SUPER_SECRET_API_KEY_CHANGE_ME"; // CHANGE THIS!
+// Set API_SECRET as an encrypted Worker secret in Cloudflare settings.
 const AUTH_HEADER = "X-API-Key";
 
 export default {
@@ -16,7 +16,7 @@ export default {
 
         // Basic Authentication Check
         const apiKey = request.headers.get(AUTH_HEADER);
-        if (apiKey !== API_SECRET) {
+        if (!env.API_SECRET || apiKey !== env.API_SECRET) {
             return new Response("Unauthorized", { status: 401 });
         }
 
@@ -27,7 +27,9 @@ export default {
         // --- Operations for a specific IP name: /names/{accountId}/{groupId}/{ipAddress} ---
         if (pathSegments.length === 4) {
             const [, accountId, groupId, ipAddressEncoded] = pathSegments;
-            const ipAddress = ipAddressEncoded.replace(/_/g, '.').replace(/-/g, ':');
+            let ipAddress;
+            try { ipAddress = decodeURIComponent(ipAddressEncoded).replace(/_/g, '.').replace(/-/g, ':'); }
+            catch { return new Response('Invalid IP path', { status: 400 }); }
             const kvKey = `name:${accountId}:${groupId}:${ipAddress}`;
 
             switch (request.method) {
@@ -50,10 +52,10 @@ export default {
                 case "PUT":
                     try {
                         const body = await request.json();
-                        if (!body || typeof body.name !== 'string' || body.name.trim() === '') {
+                        if (!body || typeof body.name !== 'string' || body.name.trim() === '' || body.name.trim().length > 100) {
                             return new Response("Invalid request body. JSON with non-empty 'name' string required.", { status: 400 });
                         }
-                        await env.kv_cfupdater.put(kvKey, body.name.trim());
+                        await env.kv_cfupdater.put(kvKey, body.name.trim(), { metadata: { name: body.name.trim() } });
                         return new Response(JSON.stringify({ message: "Name saved successfully", key: kvKey, name: body.name.trim() }), {
                             status: 200,
                             headers: { 'Content-Type': 'application/json' },
@@ -86,15 +88,20 @@ export default {
             const [, accountId, groupId] = pathSegments;
             const prefix = `name:${accountId}:${groupId}:`;
             try {
-                const listResult = await env.kv_cfupdater.list({ prefix: prefix });
                 const namesMap = {};
-                for (const key of listResult.keys) {
-                    const ipAddressWithPrefix = key.name.substring(prefix.length);
-                    const nameValue = await env.kv_cfupdater.get(key.name);
-                    if (nameValue !== null) {
-                        namesMap[ipAddressWithPrefix] = nameValue;
+                let cursor;
+                do {
+                    const listResult = await env.kv_cfupdater.list({ prefix, cursor });
+                    for (const key of listResult.keys) {
+                        const ip = key.name.substring(prefix.length);
+                        // Metadata avoids one additional KV read per name; support old entries too.
+                        const name = typeof key.metadata?.name === 'string'
+                            ? key.metadata.name : await env.kv_cfupdater.get(key.name);
+                        if (name !== null) namesMap[ip] = name;
                     }
-                }
+                    if (listResult.list_complete) break;
+                    cursor = listResult.cursor;
+                } while (cursor);
                 return new Response(JSON.stringify(namesMap), {
                     headers: { 'Content-Type': 'application/json' },
                 });

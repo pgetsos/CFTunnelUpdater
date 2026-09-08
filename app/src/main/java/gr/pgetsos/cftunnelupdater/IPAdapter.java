@@ -7,10 +7,14 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 
 public class IPAdapter extends RecyclerView.Adapter<IPAdapter.ViewHolder> {
 
     private List<String> ipList;
+    private Map<String, String> names = new HashMap<>();
+    private OnIpLongPressListener clickListener;
     private OnIpLongPressListener longPressListener;
 
     public IPAdapter(List<String> ipList, OnIpLongPressListener longPressListener) {
@@ -28,7 +32,11 @@ public class IPAdapter extends RecyclerView.Adapter<IPAdapter.ViewHolder> {
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         String ip = ipList.get(position);
-        holder.ipTextView.setText(ip);
+        String name = names.get(IpNameKey.of(ip));
+        holder.ipTextView.setText(name == null || name.isEmpty() ? ip : name + "\n" + ip);
+        holder.itemView.setOnClickListener(v -> {
+            if (clickListener != null) clickListener.onIpLongPressed(ip, holder.getAdapterPosition());
+        });
 
         holder.itemView.setOnLongClickListener(v -> {
             if (longPressListener != null) {
@@ -42,6 +50,13 @@ public class IPAdapter extends RecyclerView.Adapter<IPAdapter.ViewHolder> {
     @Override
     public int getItemCount() {
         return ipList.size();
+    }
+
+    public void setClickListener(OnIpLongPressListener listener) { clickListener = listener; }
+
+    public void updateNames(Map<String, String> newNames) {
+        names = new HashMap<>(newNames);
+        notifyDataSetChanged();
     }
 
     public void updateList(List<String> newList) {
