@@ -1,19 +1,12 @@
-# 0.7.1
+# 0.7.2
 
-- Make background monitoring silent at the lowest supported foreground-service priority, disable notification badges and request lock-screen hiding. Existing Android channel preferences remain in effect.
-- Add 24dp of spacing above the Setup guide button.
-- Increase the Android build number to 12.
+The main features introduced in 0.7.0 are included in this release:
 
-# 0.7.0
-
-Build 11 fixes inconsistent screen and navigation colors and adds a saved dark/light theme toggle in Settings. It updates build 10 using the same signing key.
-
-- Add Status as the first tab with live IP/group status, monitoring, sync history, pending edits and next expiry.
-- Add optional IP names and added/expiry dates shared through Cloudflare Worker KV, with offline retries.
-- Add expiry presets and optional scheduled server cleanup.
-- Add automatic IP replacement with /64 IPv6 ranges and protection for named entries; explicit expiry still applies.
-- Add optional background network-change monitoring with an ongoing notification and Stop action.
-- Add in-app setup instructions and a manually triggered signed release workflow.
-- Update Android dependencies and build tools.
-
-This release uses a new signing key. Installations signed with a different key must be uninstalled before installing this APK; preserve your settings first.
+- A new Status tab shows your public IP, Access group status, background monitoring, shared details and next IP expiry.
+- Give IPs a name and share their names, added dates and expiry dates across phones through Cloudflare Worker KV.
+- Set an IP to expire after 15 minutes, an hour, a day, a month or at a custom date and time. Choose Never to keep it. A Worker schedule can remove expired IPs while your phone is offline.
+- Automatically replace this phone's previous IP when it changes. IPv6 entries use /64 ranges. Named IPs are kept when replacing an old IP, but still expire if you set an expiry date.
+- Check for IP changes when Wi-Fi or mobile networks change, with periodic checks as a fallback.
+- Choose a light or dark theme in Settings.
+- Follow the setup guide inside the app to configure Cloudflare access and shared details.
+- Build and publish signed APKs from a manually started GitHub Actions workflow.

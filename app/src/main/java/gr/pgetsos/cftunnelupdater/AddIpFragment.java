@@ -129,10 +129,10 @@ public class AddIpFragment extends Fragment {
             updateCurrentIpStatus();
         }
 
+        customIpCheckerUrlEditText.setText(currentCustomIpCheckerUrl);
         if (IP_CHECKER_TYPE_CUSTOM.equals(currentIpCheckerType)) {
             useCustomIpCheckerSwitch.setChecked(true);
             customIpCheckerUrlTil.setVisibility(View.VISIBLE);
-            customIpCheckerUrlEditText.setText(currentCustomIpCheckerUrl);
         } else {
             useCustomIpCheckerSwitch.setChecked(false);
             customIpCheckerUrlTil.setVisibility(View.GONE);
@@ -145,6 +145,15 @@ public class AddIpFragment extends Fragment {
                 currentIpCheckerType = IP_CHECKER_TYPE_IPIFY;
                 customIpCheckerUrlTil.setVisibility(View.GONE);
             }
+            settingsManager.setIpCheckerType(currentIpCheckerType);
+        });
+        customIpCheckerUrlEditText.addTextChangedListener(new android.text.TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                currentCustomIpCheckerUrl = s.toString().trim();
+                settingsManager.setCustomIpCheckerUrl(currentCustomIpCheckerUrl);
+            }
+            @Override public void afterTextChanged(android.text.Editable s) {}
         });
 
         Button addIpToCfButton = addIpView.findViewById(R.id.add_ip_to_cf_button);
@@ -165,7 +174,7 @@ public class AddIpFragment extends Fragment {
         });
 
         saveSettingsButton.setOnClickListener(view -> {
-            String customIpCheckerUrl = customIpCheckerUrlEditText.getText().toString();
+            String customIpCheckerUrl = customIpCheckerUrlEditText.getText().toString().trim();
             currentCustomIpCheckerUrl = customIpCheckerUrl;
             settingsManager.setIpCheckerType(currentIpCheckerType);
             settingsManager.setCustomIpCheckerUrl(customIpCheckerUrl);
@@ -173,7 +182,7 @@ public class AddIpFragment extends Fragment {
         });
 
         getIpButton.setOnClickListener(view -> {
-            currentCustomIpCheckerUrl = customIpCheckerUrlEditText.getText().toString();
+            currentCustomIpCheckerUrl = customIpCheckerUrlEditText.getText().toString().trim();
             getPublicIP();
         });
     }
