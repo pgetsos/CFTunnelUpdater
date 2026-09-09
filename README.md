@@ -1,79 +1,130 @@
-# What is this app?
+# CFTunnelUpdater
 
-**CFTunnelUpdater** is, well, a **Cloudflare Tunnel Group** updater app. The point of the app is to quickly and easily add an IP to an Access Rule Group, in order to allow that IP to access services behind your Tunnel. This way it is extremely easy to work on a IP-whitelist way.
+CFTunnelUpdater is an Android app for managing the IP addresses allowed through a
+Cloudflare Access group. Add your current IP when you change networks, name saved
+addresses, and set expiry dates for temporary access to services behind your tunnel.
 
-# How to setup your Cloudflare Tunnel
-First of all, you have to create inside Access a Rule Group (Let's call it IP Group) with IP Ranges as a selector. 
-Then, an Application with a Bypass policy (Action: Bypass). 
-In the policy, assign the IP Group only (include option). 
+## Cloudflare setup
 
-You are done! Now any IP in this Group (and ONLY the IPs in this Group) can freely access your Application. Any other IP will be automatically blocked from Cloudflare.
+1. In Cloudflare Access, create a group with **IP ranges** as a selector.
+2. Add that group to the **Include** rules of your application's Access policy.
+   Use a **Bypass** policy if matching IPs should access the application without signing in.
+3. Check the application's other policies to ensure they allow only the access you intend.
+4. Copy your **Account ID** and **Access Group ID**.
+5. Create an account-scoped API token with **Access: Organizations, Identity Providers,
+   and Groups** permissions to read and edit the group.
+6. Enter the IDs and token in the app's **Settings**, then tap **Save**.
 
-# How to use the app
-Opening the Cloudflare dashboard and navigating to the IP Group to add a new IP every time you connect through a new network or you restart your router, is obviously not that quick. This app helps adding a new IP in just a few seconds after the initial setup.
+An offline setup guide is also available in Settings.
 
-You will need:
+## Using the app
 
-### Your Account ID
-You can find it at the bottom right of your domain page (API section)
-### Your Group ID 
-You can find it in the Rule Groups page, next to the name (far right of the page)
-### An API Token
-Go to your domain page, Manage account, Account API Tokens, Create Token, Create custom Token (the bottom option).
-For permissions, you have to create 2: One with Account, Access: Organizations, Identity Providers, and Groups, Edit, and then one with Account, Access: Organizations, Identity Providers, and Groups, Read. Just add a name, Continue to summary, and get your API Token.
+The app opens on **Status**, which shows your last checked IP, Access-group
+membership, monitoring state, sync status, pending changes, and next known expiry.
+Use **Check now** to refresh these details. If syncing fails, **Retry sync** retries
+it and **Fix settings** opens Settings. A failed check keeps the previous successful
+result visible alongside the error.
 
-Add all 3 to the app. The app saves the last used IDs/Token so you will not have to add them again every time you add a new IP to the Group.
+To add an address, open **Add IP**, tap **Get My IP**, optionally enter a name and
+expiry, and tap **Add IP to CF**. You can also type an IPv4 address, IPv6 address, or
+CIDR range yourself. IPv6 addresses without a prefix use `/64`; IPv4 uses `/32`.
 
-Then, when you open the app, it fills the IP input with the current IP your phone has. If for whatever reason this failed, you can click on the "Update IP" button to retry. You can erase the auto-filled IP and put any IP you would like (IPv4 and IPv6 are both supported).
+In **List IPs**, tap an entry to edit its name or expiry, or hold it to delete it.
+Leaving the name blank on the Add IP screen preserves an existing name. Added dates
+are recorded for new entries; older entries may have an unknown added date.
 
-Clicking "Add IP to CF" should add the IP to your Group, and give it access to your Applications behind the tunnel. A small Toast will appear on success! Each IP can be added only once, so don't worry about spaming the same IP multiple times in the Group!
+### Custom IP checker
 
-# Optional IP names and sync
+The app uses ipify by default. To use your own service, enable **Custom IP Checker
+Site** on the Add IP screen, enter an HTTPS endpoint returning a JSON string field
+named `IP`, and tap **Save Settings**. For rest-geoip, use the `/api/geoip` endpoint.
 
-Enter an optional name when adding an IP. In the IP list, tap a row to add,
-change, or clear its name; hold a row to delete the IP. Blank names on the Add
-screen leave an existing name unchanged. Names belong to the IP/range within
-one account and Access group. IPv6 entries added without a prefix retain the
-app's existing /64 behavior, so their name describes that range.
+### Automatic updates
 
-Without Worker settings, names are saved on this phone. For names shared across
-phones, use the included Cloudflare Worker and KV store:
+Enable **Auto-Update** in Settings to add the phone's current IP automatically.
+Enable **Replace this phone's previous auto-added IP** to remove its previous
+unnamed automatic entry when the address changes.
 
-1. Create a KV namespace in Cloudflare (for example `kv-cfupdater`).
-2. Create a Worker and deploy the code from **CFWorker.js** in this repository.
-3. Add a KV binding named **kv_cfupdater**, pointing to that namespace.
-4. Add an encrypted Worker secret named **API_SECRET**, with a strong random value.
-   The Worker refuses requests if this secret is missing. Existing deployments
-   that used a hardcoded secret must configure this secret when upgrading.
-5. In the app's Settings, save the Worker HTTPS URL and use that secret as the
-   Worker API key. This key is separate from the Cloudflare Access API token.
-6. On each phone, use the same Worker URL/key and Cloudflare account/group IDs,
-   with a Cloudflare API token allowed to access that group.
+- Automatic IPv6 entries use `/64`; IPv4 entries use `/32`.
+- Named entries are retained during replacement. Any expiry you explicitly set still applies.
+- Existing manual entries and entries added by another phone are not adopted for replacement.
+- Replacement tracking stays on this phone, even when names and dates are shared.
 
-Open the IP list or tap **Refresh IPs and names** to fetch shared names. KV is
-[eventually consistent](https://developers.cloudflare.com/kv/concepts/how-kv-works/):
-changes can take 60 seconds or more to reach another location. Concurrent edits
-to the same name use the last write received by KV. Access rules remain in
-Cloudflare Access; KV stores only labels.
+For faster checks when switching Wi-Fi/mobile networks or reconnecting, enable
+**Monitor network changes in background**, tap **Save**, and allow notifications.
+Its ongoing notification includes **Stop**, which returns the app to periodic checks.
+Reopen the app after rebooting or force-stopping it.
 
-Local-only names and each Worker's cached names are separate. After enabling
-sync, re-enter any local names you want to share. Failed remote saves are reported
-and can be retried; there is no background upload queue. A failed name sync does
-not prevent viewing IPs or changing access. Deleting an IP also attempts to delete
-its label; a label cleanup failure is reported separately.
+Periodic checks remain as a fallback because a router's public IP can change without
+a network-change event on the phone. Checks run approximately every 15 minutes or
+later; connectivity and Android battery restrictions can delay them.
 
-Anyone with the Worker key can read and edit labels for groups stored in that
-Worker. Share it only with the phones that should have this access.
+### Expiry
+
+Choose **15 minutes**, **1 hour**, **1 day**, **1 month**, **Custom**, or **Never**.
+One month means a calendar month, and dates display in your phone's time zone.
+
+The app removes expired entries when it can run online. Removal can be delayed if
+the phone is offline or Android restricts background work. For cleanup while phones
+are offline, configure scheduled Worker cleanup below.
+
+## Sharing names and dates across phones
+
+Without Worker settings, details stay on the phone. To share names, added dates,
+and expiry times through Cloudflare KV:
+
+1. Create a KV namespace and a Worker in Cloudflare.
+2. Deploy [CFWorker.js](CFWorker.js) to the Worker.
+3. Add a KV binding named `kv_cfupdater`, pointing to the namespace.
+4. Add an encrypted Worker secret named `API_SECRET` with a strong random value.
+5. In the app's Settings, enter the Worker's HTTPS base URL and use that secret as
+   the **Worker API key**. This is separate from your Cloudflare Access API token.
+6. Use the same Worker URL/key and Account/Group IDs on each phone.
+
+Open the IP list or refresh Status to fetch shared details. Changes save locally
+first and retry syncing after failed requests. Shared changes may take a minute or
+more to appear on another phone. Automatic updates pause if configured sync fails,
+so they can check shared names before replacing an entry.
+
+Local-only details and details for different Worker configurations are stored
+separately. After enabling sync, re-enter any local names you want to share.
+Anyone with the Worker key can edit shared details, including expiry dates, so give
+it only to phones that should have that access. Changes to the shared Access group
+affect all devices using its addresses.
+
+### Scheduled cleanup
+
+In the Worker's **Settings → Runtime variables and secrets**, add:
+
+| Name | Type | Value |
+| --- | --- | --- |
+| `CF_ACCESS_TOKEN` | Secret | An account-scoped token with Access group read/edit access |
+| `CF_ACCOUNT_ID` | Text | Your Account ID |
+| `CF_GROUP_ID` | Text | The Access Group ID to clean up |
+
+Under **Trigger events → Cron triggers**, add `*/5 * * * *` to check every five
+minutes. Cleanup applies only to the configured group. Keep the existing
+`API_SECRET` and KV binding. Do not set KV expiration on these records: removing
+a record alone does not revoke the IP's Access permission.
+
+### Sync authentication errors
+
+HTTP 401 means the Worker rejected the request. Check that the app's **Worker API
+key** matches the deployed Worker's `API_SECRET`, and that its Worker base URL is
+correct. Entering the Access API token in this field will not work unless it was
+also deliberately configured as that secret. Local edits stay saved while you fix
+these settings.
 
 # Roadmap
+
 In no particular order, these are things I want to implement someday
-- [ ] Create release (and automate it, maybe)
+- [x] Create release (and automate it, maybe)
 - [x] List with all IPs right now in the Group
-- [x] Optional names for IPs, with Worker/KV sync
+- [x] A name for each IP added through the app
 - [x] Deletion of IPs from the app
-- [ ] Expiry date/time for each IP (needs you to re-open the app after that date/time)
-- [ ] Date added of each IP
+- [x] Expiry date/time for each IP (needs you to re-open the app after that date/time)
+- [x] Date added of each IP
 - [x] App icon
-- [ ] Setup instructions inside the app
+- [x] Setup instructions inside the app
 - [ ] Publish on F-Droid/Play Store
-- [ ] Auto-adding the current phone IP to the list
+- [x] Auto-adding the current phone IP to the list

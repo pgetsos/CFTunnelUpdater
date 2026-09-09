@@ -1,4 +1,5 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@+id/nav_status" android:title="Status" android:icon="@drawable/ic_status" />
     <item
         android:id="@+id/nav_add_ip"
         android:title="Add IP"

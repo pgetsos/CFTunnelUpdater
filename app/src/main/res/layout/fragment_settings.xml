@@ -140,6 +140,22 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/tv_options_title" />
 
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switch_replace_auto" android:layout_width="0dp" android:layout_height="wrap_content"
+            android:text="Replace this phone’s previous auto-added IP"
+            app:layout_constraintTop_toBottomOf="@id/switch_auto_update" app:layout_constraintStart_toStartOf="parent" app:layout_constraintEnd_toEndOf="parent" />
+        <TextView android:id="@+id/auto_explanation" android:layout_width="0dp" android:layout_height="wrap_content"
+            android:text="Checks while the app is open and periodically in the background (15 minutes or later). Replacement tracking stays on this phone. Existing entries are never claimed as auto-added."
+            app:layout_constraintTop_toBottomOf="@id/switch_replace_auto" app:layout_constraintStart_toStartOf="parent" app:layout_constraintEnd_toEndOf="parent" />
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switch_background_monitor" android:layout_width="0dp" android:layout_height="wrap_content"
+            android:text="Monitor network changes in background"
+            app:layout_constraintTop_toBottomOf="@id/auto_explanation" app:layout_constraintStart_toStartOf="parent" app:layout_constraintEnd_toEndOf="parent" />
+        <TextView android:id="@+id/background_explanation" android:layout_width="0dp" android:layout_height="wrap_content"
+            android:text="Shows an ongoing notification. Checks after Wi-Fi/mobile changes or reconnecting. Periodic checks still catch router IP changes. Reopen the app after reboot or force-stop. Android may delay checks."
+            app:layout_constraintTop_toBottomOf="@id/switch_background_monitor" app:layout_constraintStart_toStartOf="parent" app:layout_constraintEnd_toEndOf="parent" />
+        <Button android:id="@+id/setup_guide" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="Setup guide" app:layout_constraintTop_toBottomOf="@id/background_explanation" app:layout_constraintStart_toStartOf="parent" />
         <Button
             android:id="@+id/btn_save"
             android:layout_width="wrap_content"
@@ -147,7 +163,7 @@
             android:layout_marginTop="24dp"
             android:text="Save"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/switch_auto_update" />
+            app:layout_constraintTop_toBottomOf="@id/setup_guide" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </ScrollView>

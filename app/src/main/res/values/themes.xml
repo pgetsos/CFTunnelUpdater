@@ -6,4 +6,5 @@
     </style>
 
     <style name="Theme.CFTunnelUpdater" parent="Base.Theme.CFTunnelUpdater" />
+<style name="StatusNavIndicator" parent="Widget.Material3.BottomNavigationView.ActiveIndicator"><item name="android:color">#E2F2F2</item></style>
 </resources>

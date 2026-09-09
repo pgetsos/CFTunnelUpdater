@@ -27,12 +27,13 @@ public class MainActivity extends AppCompatActivity {
 
     private static final String TAG_IP_MONITOR_WORK = "IP_MONITOR_WORK";
 
+    private static final String TAG_STATUS_FRAGMENT = "TAG_STATUS_FRAGMENT";
     private static final String TAG_ADD_IP_FRAGMENT = "TAG_ADD_IP_FRAGMENT";
     private static final String TAG_LIST_IPS_FRAGMENT = "TAG_LIST_IPS_FRAGMENT";
     private static final String TAG_SETTINGS_FRAGMENT = "TAG_SETTINGS_FRAGMENT";
     private static final String KEY_SELECTED_NAV_ITEM_ID = "KEY_SELECTED_NAV_ITEM_ID";
 
-    private int selectedNavItemId = R.id.nav_add_ip;
+    private int selectedNavItemId = R.id.nav_status;
     private Fragment activeFragment;
 
     @Override
@@ -46,27 +47,32 @@ public class MainActivity extends AppCompatActivity {
             return insets;
         });
 
+        StatusFragment statusFragment;
         SettingsFragment settingsFragment;
         ListIpsFragment listIpsFragment;
         AddIpFragment addIpFragment;
 
         if (savedInstanceState == null) {
+            statusFragment = new StatusFragment();
             addIpFragment = new AddIpFragment();
             listIpsFragment = new ListIpsFragment();
             settingsFragment = new SettingsFragment();
             getSupportFragmentManager().beginTransaction()
                     .add(R.id.container, settingsFragment, TAG_SETTINGS_FRAGMENT).hide(settingsFragment)
                     .add(R.id.container, listIpsFragment, TAG_LIST_IPS_FRAGMENT).hide(listIpsFragment)
-                    .add(R.id.container, addIpFragment, TAG_ADD_IP_FRAGMENT)
+                    .add(R.id.container, addIpFragment, TAG_ADD_IP_FRAGMENT).hide(addIpFragment)
+                    .add(R.id.container, statusFragment, TAG_STATUS_FRAGMENT)
                     .commit();
-            activeFragment = addIpFragment;
+            activeFragment = statusFragment;
         } else {
-            selectedNavItemId = savedInstanceState.getInt(KEY_SELECTED_NAV_ITEM_ID, R.id.nav_add_ip);
+            selectedNavItemId = savedInstanceState.getInt(KEY_SELECTED_NAV_ITEM_ID, R.id.nav_status);
+            statusFragment = (StatusFragment) getSupportFragmentManager().findFragmentByTag(TAG_STATUS_FRAGMENT);
             addIpFragment = (AddIpFragment) getSupportFragmentManager().findFragmentByTag(TAG_ADD_IP_FRAGMENT);
             listIpsFragment = (ListIpsFragment) getSupportFragmentManager().findFragmentByTag(TAG_LIST_IPS_FRAGMENT);
             settingsFragment = (SettingsFragment) getSupportFragmentManager().findFragmentByTag(TAG_SETTINGS_FRAGMENT);
 
-            if (selectedNavItemId == R.id.nav_list_ips) {
+            if (selectedNavItemId == R.id.nav_status) { activeFragment = statusFragment; }
+            else if (selectedNavItemId == R.id.nav_list_ips) {
                 activeFragment = listIpsFragment;
             } else if (selectedNavItemId == R.id.nav_settings) {
                 activeFragment = settingsFragment;
@@ -82,7 +88,8 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             }
             Fragment targetFragment = null;
-            if (item.getItemId() == R.id.nav_add_ip) {
+            if (item.getItemId() == R.id.nav_status) { targetFragment = statusFragment; }
+            else if (item.getItemId() == R.id.nav_add_ip) {
                 targetFragment = addIpFragment;
             } else if (item.getItemId() == R.id.nav_list_ips) {
                 targetFragment = listIpsFragment;
@@ -108,30 +115,22 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public void schedulePublicIpMonitor() {
-        Constraints constraints = new Constraints.Builder()
-                .setRequiredNetworkType(NetworkType.CONNECTED)
-                .build();
+    public void schedulePublicIpMonitor() { MaintenanceScheduler.schedule(this); MaintenanceScheduler.now(this); }
+    public void cancelPublicIpMonitor() { WorkManager.getInstance(this).cancelUniqueWork(TAG_IP_MONITOR_WORK); }
 
-        PeriodicWorkRequest ipMonitorWorkRequest =
-                new PeriodicWorkRequest.Builder(PublicIpMonitorWorker.class,
-                        15, TimeUnit.MINUTES) // Minimum interval for PeriodicWork
-                        .setConstraints(constraints)
-                        .addTag(TAG_IP_MONITOR_WORK)
-                        .build();
-
-        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
-                TAG_IP_MONITOR_WORK,
-                ExistingPeriodicWorkPolicy.KEEP,
-                ipMonitorWorkRequest);
-
-        Log.i("MainActivity", "Public IP Monitor work scheduled.");
+    private NetworkChangeMonitor networkMonitor;
+    @Override protected void onStart() {
+        super.onStart();
+        MaintenanceScheduler.schedule(this); MaintenanceScheduler.now(this);
+        NetworkMonitorService.reconcile(this);
+        networkMonitor = new NetworkChangeMonitor(this);
+    }
+    @Override protected void onStop() {
+        if (networkMonitor != null) { networkMonitor.close(); networkMonitor = null; }
+        super.onStop();
     }
 
-    public void cancelPublicIpMonitor() {
-        WorkManager.getInstance(this).cancelUniqueWork(TAG_IP_MONITOR_WORK);
-        Log.i("MainActivity", "Public IP Monitor work canceled.");
-    }
+    public void selectTab(int id) { ((BottomNavigationView)findViewById(R.id.bottom_nav)).setSelectedItemId(id); }
 
     private void showFragment(Fragment fragment) {
         if (fragment == null || activeFragment == null) {

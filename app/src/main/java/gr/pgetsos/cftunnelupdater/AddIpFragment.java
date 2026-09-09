@@ -114,6 +114,10 @@ public class AddIpFragment extends Fragment {
         ipEditText = addIpView.findViewById(R.id.ip_et);
         ipNameEditText = addIpView.findViewById(R.id.ipNameEditText);
         currentIpStatusTextView = addIpView.findViewById(R.id.current_ip_status_tv);
+        Button expiryButton = addIpView.findViewById(R.id.ip_expiry_button);
+        expiryButton.setOnClickListener(v -> ExpiryPicker.show(requireContext(), selectedExpiry, at -> {
+            selectedExpiry = at; expiryButton.setText(ExpiryPicker.label(at));
+        }));
         SwitchMaterial useCustomIpCheckerSwitch = addIpView.findViewById(R.id.custom_ip_checker_switch);
         TextInputLayout customIpCheckerUrlTil = addIpView.findViewById(R.id.custom_ip_checker_url_til);
         EditText customIpCheckerUrlEditText = addIpView.findViewById(R.id.custom_ip_checker_url_et);
@@ -174,81 +178,36 @@ public class AddIpFragment extends Fragment {
         });
     }
 
+    private Long selectedExpiry;
     private void addCurrentIpToGroup() {
-        final String submittedIp = ipAddress.trim();
         final String submittedName = ipNameEditText.getText() == null ? "" : ipNameEditText.getText().toString().trim();
-        final IpNameStore names = new IpNameStore(requireContext());
+        final String submittedIp;
+        try {
+            String value = ipAddress.trim();
+            submittedIp = IpNameKey.of(value.contains("/") ? value : value + (value.contains(":") ? "/64" : "/32"));
+        } catch (Exception e) { toastUi("Invalid IP or CIDR range"); return; }
         if (submittedName.length() > 100) { toastUi("Names can contain up to 100 characters."); return; }
-        try { IpNameKey.of(submittedIp); }
-        catch (IllegalArgumentException e) { toastUi(e.getMessage()); return; }
-        cloudflareApiHelper.getCurrentGroup(accountID, groupID, apiToken, new CloudflareApiHelper.ApiCallback<AccessGroupResponse>() {
-            @Override
-            public void onSuccess(AccessGroupResponse response) {
-                AccessGroupResponse.IncludeItem ii = new AccessGroupResponse.IncludeItem();
-                AccessGroupResponse.Ip newIp = new AccessGroupResponse.Ip();
-                InetAddress address = null;
-                try {
-                    address = InetAddress.getByName(submittedIp.split("/")[0]);
-                } catch (UnknownHostException e) {
-                    toastUi("Invalid IP address");
-                    return;
-                }
-                if (address instanceof Inet6Address) {
-                    newIp.ip = submittedIp.contains("/") ? submittedIp : submittedIp + "/64";
-                } else if (address instanceof Inet4Address) {
-                    newIp.ip = submittedIp.contains("/") ? submittedIp : submittedIp + "/32";
-                } else {
-                    toastUi("Unknown IP address type");
-                    return;
-                }
-                ii.ip = newIp;
-
-                if (response.result.include == null) {
-                    response.result.include = new ArrayList<>();
-                }
-                response.result.include.add(ii);
-
-                // Deduplicate
-                List<AccessGroupResponse.IncludeItem> newList = new ArrayList<>();
-                for (AccessGroupResponse.IncludeItem element : response.result.include) {
-                    boolean found = false;
-                    for (AccessGroupResponse.IncludeItem newItem : newList) {
-                        if (element.ip != null && element.ip.ip != null && newItem.ip != null && newItem.ip.ip != null && IpNameKey.of(element.ip.ip).equals(IpNameKey.of(newItem.ip.ip))) {
-                            found = true;
-                            break;
-                        }
-                    }
-                    if (!found) {
-                        newList.add(element);
-                    }
-                }
-
-                cloudflareApiHelper.updateAccessGroup(accountID, groupID, apiToken, newList, new CloudflareApiHelper.ApiCallback<>() {
-                    @Override
-                    public void onSuccess(Boolean ok) {
-                        cloudflareViewModel.refreshIps();
-                        toastUi("IP added successfully.");
-
-                        if (!submittedName.isEmpty()) {
-                            names.save(newIp.ip, submittedName, new WorkerApiCallbacks.GenericWorkerApiCallback() {
-                                public void onSuccess(String message) { toastUi(message); }
-                                public void onError(String error) { toastUi("IP added, but name was not saved: " + error); }
-                            });
-                        }
-                    }
-
-                    @Override
-                    public void onError(Exception e) {
-                        toastUi("Error updating group: " + e.getMessage());
-                    }
-                });
-            }
-
-            @Override
-            public void onError(Exception e) {
-                toastUi("Failed to get current group: " + e.getMessage());
-            }
-        });
+        final Long expiry = selectedExpiry;
+        if (expiry != null && expiry <= System.currentTimeMillis()) { toastUi("Choose a future expiry time."); return; }
+        final android.content.Context context = requireContext().getApplicationContext();
+        final SettingsManager settings = new SettingsManager(context);
+        final IpMetadataStore records = new IpMetadataStore(context);
+        final String account = settings.getAccountId(), group = settings.getGroupId(), token = settings.getApiToken();
+        new Thread(() -> {
+            try {
+                boolean added = new AccessService(account, group, token).add(submittedIp);
+                IpRecord old = records.get(submittedIp);
+                records.saveLocal(submittedIp, submittedName.isEmpty() ? null : submittedName,
+                    expiry == null && !added ? old.expiresAt : expiry, added);
+                settings.clearExpiredAutoIp(submittedIp);
+                // Explicitly adding an auto-managed entry makes it a manually retained entry.
+                if (AccessService.same(settings.getOwnedAutoIp(), submittedIp)) settings.setOwnedAutoIp("");
+                MaintenanceScheduler.expiry(context, submittedIp, records.get(submittedIp).expiresAt);
+                cloudflareViewModel.refreshIps();
+                toastUi(added ? "IP added." : "IP already present; details saved.");
+                try { records.sync(); } catch (Exception e) { toastUi("Details saved locally. " + e.getMessage()); }
+            } catch (Exception e) { toastUi("Could not save IP: " + e.getMessage()); }
+        }).start();
     }
 
     private void getPublicIP() {

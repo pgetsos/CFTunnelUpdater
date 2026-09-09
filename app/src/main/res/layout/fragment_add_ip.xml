@@ -95,6 +95,10 @@
             android:maxLines="1"/>
     </com.google.android.material.textfield.TextInputLayout>
 
+    <Button android:id="@+id/ip_expiry_button" android:layout_width="0dp" android:layout_height="wrap_content"
+        android:text="No expiry" android:layout_marginTop="16dp" app:layout_constraintTop_toBottomOf="@id/ipNameEditTextLayout"
+        app:layout_constraintStart_toStartOf="parent" app:layout_constraintEnd_toEndOf="parent" />
+
     <!-- Save Button -->
     <Button
         android:id="@+id/save_settings_button"
@@ -102,7 +106,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:text="Save Settings"
-        app:layout_constraintTop_toBottomOf="@id/ipNameEditTextLayout"
+        app:layout_constraintTop_toBottomOf="@id/ip_expiry_button"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintBottom_toTopOf="@id/add_ip_to_cf_button"

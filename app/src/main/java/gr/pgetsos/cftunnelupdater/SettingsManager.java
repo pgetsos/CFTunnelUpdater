@@ -16,9 +16,13 @@ public class SettingsManager {
     public static final String PREF_CF_WORKER_API_KEY = "cfWorkerAPI";
 
     private final SharedPreferences prefs;
+    private final SharedPreferences devicePrefs;
+    private final String operationScope;
 
     public SettingsManager(Context context) {
         prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        devicePrefs = context.getSharedPreferences("device_state", Context.MODE_PRIVATE);
+        operationScope = getAccountId() + ":" + getGroupId();
     }
 
     public String getAccountId() {
@@ -97,4 +101,14 @@ public class SettingsManager {
 
         editor.apply();
     }
+    public boolean isBackgroundMonitorEnabled() { return devicePrefs.getBoolean("backgroundMonitor", false); }
+    public void setBackgroundMonitorEnabled(boolean enabled) { devicePrefs.edit().putBoolean("backgroundMonitor", enabled).apply(); }
+    private String scope() { return operationScope; }
+    public boolean isReplaceAutoIpEnabled() { return prefs.getBoolean("replaceAutoIp", false); }
+    public void setReplaceAutoIpEnabled(boolean enabled) { prefs.edit().putBoolean("replaceAutoIp", enabled).apply(); }
+    public String getOwnedAutoIp() { return devicePrefs.getString("ownedAuto:" + scope(), ""); }
+    public void setOwnedAutoIp(String ip) { devicePrefs.edit().putString("ownedAuto:" + scope(), ip).commit(); }
+    public void blockExpiredAutoIp(String ip) { devicePrefs.edit().putBoolean("expiredAuto:" + scope() + ":" + IpNameKey.of(ip), true).apply(); }
+    public boolean isExpiredAutoIpBlocked(String ip) { return devicePrefs.getBoolean("expiredAuto:" + scope() + ":" + IpNameKey.of(ip), false); }
+    public void clearExpiredAutoIp(String ip) { devicePrefs.edit().remove("expiredAuto:" + scope() + ":" + IpNameKey.of(ip)).apply(); }
 }
