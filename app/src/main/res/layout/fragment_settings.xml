@@ -163,6 +163,7 @@
             android:text="Shows an ongoing notification. Checks after Wi-Fi/mobile changes or reconnecting. Periodic checks still catch router IP changes. Reopen the app after reboot or force-stop. Android may delay checks."
             app:layout_constraintTop_toBottomOf="@id/switch_background_monitor" app:layout_constraintStart_toStartOf="parent" app:layout_constraintEnd_toEndOf="parent" />
         <Button android:id="@+id/setup_guide" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
             android:text="Setup guide" app:layout_constraintTop_toBottomOf="@id/background_explanation" app:layout_constraintStart_toStartOf="parent" />
         <Button
             android:id="@+id/btn_save"

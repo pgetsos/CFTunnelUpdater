@@ -1,3 +1,9 @@
+# 0.7.1
+
+- Make background monitoring silent at the lowest supported foreground-service priority, disable notification badges and request lock-screen hiding. Existing Android channel preferences remain in effect.
+- Add 24dp of spacing above the Setup guide button.
+- Increase the Android build number to 12.
+
 # 0.7.0
 
 Build 11 fixes inconsistent screen and navigation colors and adds a saved dark/light theme toggle in Settings. It updates build 10 using the same signing key.

@@ -37,14 +37,28 @@ public class NetworkMonitorService extends Service {
             stopSelf(); return START_NOT_STICKY;
         }
         NotificationManager notifications = (NotificationManager)getSystemService(NOTIFICATION_SERVICE);
-        if (Build.VERSION.SDK_INT >= 26) notifications.createNotificationChannel(new NotificationChannel(
-            CHANNEL, "IP change monitoring", NotificationManager.IMPORTANCE_LOW));
+        if (Build.VERSION.SDK_INT >= 26) {
+            // LOW is the minimum supported foreground-service importance. MIN can
+            // cause Android to display a more prominent system warning instead.
+            // Reuse the channel so existing user notification preferences survive.
+            NotificationChannel channel = new NotificationChannel(
+                CHANNEL, "IP change monitoring", NotificationManager.IMPORTANCE_LOW);
+            channel.setSound(null, null);
+            channel.enableVibration(false);
+            channel.enableLights(false);
+            channel.setShowBadge(false);
+            channel.setLockscreenVisibility(Notification.VISIBILITY_SECRET);
+            notifications.createNotificationChannel(channel);
+        }
         PendingIntent open = PendingIntent.getActivity(this, 0, new Intent(this, MainActivity.class), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         PendingIntent stop = PendingIntent.getService(this, 1, new Intent(this, NetworkMonitorService.class).setAction(STOP), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         Notification notification = new NotificationCompat.Builder(this, CHANNEL)
             .setSmallIcon(R.drawable.ic_network_monitor).setContentTitle("IP change monitoring active")
             .setContentText("Checks when networks change. Tap Stop to use periodic checks only.")
             .setContentIntent(open).setOngoing(true).setOnlyAlertOnce(true)
+            .setPriority(NotificationCompat.PRIORITY_LOW).setSilent(true)
+            .setVisibility(NotificationCompat.VISIBILITY_SECRET)
+            .setCategory(NotificationCompat.CATEGORY_SERVICE).setShowWhen(false)
             .addAction(0, "Stop", stop).build();
         startForeground(NOTIFICATION_ID, notification);
         if (monitor == null) monitor = new NetworkChangeMonitor(this);
