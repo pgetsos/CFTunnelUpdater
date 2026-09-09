@@ -25,6 +25,9 @@ public class SettingsManager {
         operationScope = getAccountId() + ":" + getGroupId();
     }
 
+    public int getThemeMode() { return devicePrefs.getInt("themeMode", androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM); }
+    public void setThemeMode(int mode) { devicePrefs.edit().putInt("themeMode", mode).apply(); }
+
     public String getAccountId() {
         return prefs.getString(PREF_ACCOUNT_ID, "");
     }

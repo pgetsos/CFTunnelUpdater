@@ -4,4 +4,18 @@
     <color name="white">#FFFFFFFF</color>
     <color name="status_green">#18C101</color>
     <color name="status_orange">#FF7D3C</color>
+    <color name="app_background">#F4F7FA</color>
+    <color name="app_surface">#FFFFFF</color>
+    <color name="app_text">#142943</color>
+    <color name="app_text_secondary">#64748B</color>
+    <color name="app_primary">#147F83</color>
+    <color name="app_on_primary">#FFFFFF</color>
+    <color name="app_primary_container">#E2F2F2</color>
+    <color name="app_outline">#E4EAF0</color>
+    <color name="app_surface_variant">#F1F4F8</color>
+    <color name="app_success">#22845E</color>
+    <color name="app_on_success">#FFFFFF</color>
+    <color name="app_warning">#B66A06</color>
+    <color name="app_warning_surface">#FFF4DC</color>
+    <color name="app_warning_container">#FFE9BC</color>
 </resources>

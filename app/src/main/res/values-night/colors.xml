@@ -1,0 +1,18 @@
+<resources>
+    <color name="status_green">#7BD9AB</color>
+    <color name="status_orange">#514026</color>
+    <color name="app_background">#101820</color>
+    <color name="app_surface">#19252F</color>
+    <color name="app_text">#E5EDF4</color>
+    <color name="app_text_secondary">#AABBC9</color>
+    <color name="app_primary">#78D4D5</color>
+    <color name="app_on_primary">#003738</color>
+    <color name="app_primary_container">#254346</color>
+    <color name="app_outline">#354650</color>
+    <color name="app_surface_variant">#22323F</color>
+    <color name="app_success">#7BD9AB</color>
+    <color name="app_on_success">#003822</color>
+    <color name="app_warning">#FFC570</color>
+    <color name="app_warning_surface">#3D3020</color>
+    <color name="app_warning_container">#514026</color>
+</resources>

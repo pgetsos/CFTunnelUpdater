@@ -16,4 +16,6 @@
     <string name="deletion_failed">Deletion failed: %s</string>
     <string name="failed_to_parse_ip_from_custom_url">Failed to parse IP from custom URL</string>
     <string name="failed_to_fetch_public_ip">Failed to fetch IP</string>
+    <string name="dark_theme">Dark theme</string>
+    <string name="theme_hint">Use dark colors on every screen. Tap Save to apply.</string>
 </resources>

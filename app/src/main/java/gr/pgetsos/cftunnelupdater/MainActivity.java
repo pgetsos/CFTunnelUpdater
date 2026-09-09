@@ -38,6 +38,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(new SettingsManager(this).getThemeMode());
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         EdgeToEdge.enable(this);

@@ -12,7 +12,7 @@ android {
         applicationId = "gr.pgetsos.cftunnelupdater"
         minSdk = 24
         targetSdk = 37
-        versionCode = providers.gradleProperty("releaseVersionCode").orElse("10").get().toInt()
+        versionCode = providers.gradleProperty("releaseVersionCode").orElse("11").get().toInt()
         versionName = providers.gradleProperty("releaseVersionName").orElse("0.7.0").get()
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

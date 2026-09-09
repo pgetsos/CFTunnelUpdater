@@ -24,7 +24,7 @@
         app:menu="@menu/bottom_nav_menu"
         app:labelVisibilityMode="labeled"
         app:itemActiveIndicatorStyle="@style/StatusNavIndicator"
-        android:background="#FFFFFF"
+        android:background="@color/app_surface"
         app:itemIconTint="@color/status_nav"
         app:itemTextColor="@color/status_nav"
         app:layout_constraintBottom_toBottomOf="parent"

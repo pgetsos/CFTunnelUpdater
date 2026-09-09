@@ -1,10 +1,28 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
+<resources>
     <style name="Base.Theme.CFTunnelUpdater" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your light theme here. -->
-        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+        <item name="colorPrimary">@color/app_primary</item>
+        <item name="colorOnPrimary">@color/app_on_primary</item>
+        <item name="colorPrimaryContainer">@color/app_primary_container</item>
+        <item name="colorOnPrimaryContainer">@color/app_text</item>
+        <item name="colorSecondary">@color/app_primary</item>
+        <item name="colorOnSecondary">@color/app_on_primary</item>
+        <item name="colorSecondaryContainer">@color/app_primary_container</item>
+        <item name="colorOnSecondaryContainer">@color/app_text</item>
+        <item name="android:colorBackground">@color/app_background</item>
+        <item name="android:windowBackground">@color/app_background</item>
+        <item name="colorOnBackground">@color/app_text</item>
+        <item name="colorSurface">@color/app_surface</item>
+        <item name="colorOnSurface">@color/app_text</item>
+        <item name="colorSurfaceVariant">@color/app_surface_variant</item>
+        <item name="colorOnSurfaceVariant">@color/app_text_secondary</item>
+        <item name="colorOutline">@color/app_outline</item>
+        <item name="android:textColorPrimary">@color/app_text</item>
+        <item name="android:textColorSecondary">@color/app_text_secondary</item>
+        <item name="colorSurfaceContainer">@color/app_surface</item>
+        <item name="colorSurfaceContainerHigh">@color/app_surface_variant</item>
     </style>
-
     <style name="Theme.CFTunnelUpdater" parent="Base.Theme.CFTunnelUpdater" />
-<style name="StatusNavIndicator" parent="Widget.Material3.BottomNavigationView.ActiveIndicator"><item name="android:color">#E2F2F2</item></style>
+    <style name="StatusNavIndicator" parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
+        <item name="android:color">@color/app_primary_container</item>
+    </style>
 </resources>

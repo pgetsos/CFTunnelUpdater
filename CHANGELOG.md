@@ -1,5 +1,7 @@
 # 0.7.0
 
+Build 11 fixes inconsistent screen and navigation colors and adds a saved dark/light theme toggle in Settings. It updates build 10 using the same signing key.
+
 - Add Status as the first tab with live IP/group status, monitoring, sync history, pending edits and next expiry.
 - Add optional IP names and added/expiry dates shared through Cloudflare Worker KV, with offline retries.
 - Add expiry presets and optional scheduled server cleanup.

@@ -23,6 +23,7 @@ public class SettingsFragment extends Fragment {
     private TextInputEditText accountIdEditText;
     private TextInputEditText cfWorkerUrlEditText;
     private TextInputEditText workerApiKeyEditText;
+    private SwitchMaterial darkThemeSwitch;
     private SwitchMaterial autoUpdateSwitch;
     private SwitchMaterial replaceAutoSwitch;
     private SwitchMaterial backgroundSwitch;
@@ -49,6 +50,8 @@ public class SettingsFragment extends Fragment {
         accessGroupKeyEditText = view.findViewById(R.id.et_access_group_key);
         cfWorkerUrlEditText = view.findViewById(R.id.et_cf_worker_url);
         workerApiKeyEditText = view.findViewById(R.id.et_worker_api_key);
+        darkThemeSwitch = view.findViewById(R.id.switch_dark_theme);
+        darkThemeSwitch.setChecked((getResources().getConfiguration().uiMode & android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES);
         autoUpdateSwitch = view.findViewById(R.id.switch_auto_update);
         replaceAutoSwitch = view.findViewById(R.id.switch_replace_auto);
         backgroundSwitch = view.findViewById(R.id.switch_background_monitor);
@@ -114,6 +117,9 @@ public class SettingsFragment extends Fragment {
             ((MainActivity) requireActivity()).cancelPublicIpMonitor();
         }
 
+        int themeMode = darkThemeSwitch.isChecked() ? androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES : androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO;
+        settingsManager.setThemeMode(themeMode);
         Toast.makeText(getContext(), R.string.settings_saved, Toast.LENGTH_SHORT).show();
+        androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(themeMode);
     }
 }

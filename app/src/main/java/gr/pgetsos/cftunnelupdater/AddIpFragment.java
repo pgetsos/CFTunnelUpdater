@@ -287,7 +287,7 @@ public class AddIpFragment extends Fragment {
         if (accountID.isEmpty() || groupID.isEmpty() || apiToken.isEmpty()) {
             currentIpStatusTextView.setText(R.string.set_credentials_to_check_ip_status);
             if (getContext() != null) {
-                currentIpStatusTextView.setTextColor(requireContext().getResources().getColor(android.R.color.darker_gray, requireContext().getTheme()));
+                currentIpStatusTextView.setTextColor(requireContext().getResources().getColor(R.color.app_text_secondary, requireContext().getTheme()));
             }
             return;
         }
@@ -298,14 +298,14 @@ public class AddIpFragment extends Fragment {
         }
 
         if (getContext() != null) {
-            currentIpStatusTextView.setTextColor(requireContext().getResources().getColor(android.R.color.darker_gray, requireContext().getTheme()));
+            currentIpStatusTextView.setTextColor(requireContext().getResources().getColor(R.color.app_text_secondary, requireContext().getTheme()));
         }
 
         List<String> ips = cloudflareViewModel.getCloudflareIpsLiveData().getValue();
 
         if (ips == null) {
             currentIpStatusTextView.setText(String.format("Failed to check IP status (%s)", "Cloudflare returned with error"));
-            currentIpStatusTextView.setTextColor(requireContext().getResources().getColor(android.R.color.darker_gray, requireContext().getTheme()));
+            currentIpStatusTextView.setTextColor(requireContext().getResources().getColor(R.color.app_text_secondary, requireContext().getTheme()));
             return;
         }
 
@@ -324,8 +324,8 @@ public class AddIpFragment extends Fragment {
                 currentIpStatusTextView.setBackgroundColor(requireContext().getResources().getColor(android.R.color.transparent, requireContext().getTheme()));
             } else {
                 currentIpStatusTextView.setText(String.format("Your current IP (%s) is NOT in the Cloudflare group.", currentPublicIp));
-                currentIpStatusTextView.setTextColor(requireContext().getResources().getColor(R.color.black, requireContext().getTheme()));
-                currentIpStatusTextView.setBackgroundColor(requireContext().getResources().getColor(R.color.status_orange, requireContext().getTheme()));
+                currentIpStatusTextView.setTextColor(requireContext().getResources().getColor(R.color.app_warning, requireContext().getTheme()));
+                currentIpStatusTextView.setBackgroundColor(requireContext().getResources().getColor(R.color.app_warning_container, requireContext().getTheme()));
             }
         });
     }
