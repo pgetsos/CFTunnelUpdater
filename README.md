@@ -29,7 +29,11 @@ To add an address, open **Add IP**, tap **Get My IP**, optionally enter a name a
 expiry, and tap **Add IP to CF**. You can also type an IPv4 address, IPv6 address, or
 CIDR range yourself. IPv6 addresses without a prefix use `/64`; IPv4 uses `/32`.
 
-In **List IPs**, tap an entry to edit its name or expiry, or hold it to delete it.
+In **List IPs**, tap an entry to edit its name or expiry, or choose **Use current
+phone IP** to replace that specific address. Confirm the old and new addresses to
+keep the entry's name, original added date, and expiry. The old address loses
+access. If your current address is already saved, both entries are kept. IPv6 uses
+`/64`; IPv4 uses `/32`. Hold an entry to delete it.
 Leaving the name blank on the Add IP screen preserves an existing name. Added dates
 are recorded for new entries; older entries may have an unknown added date.
 

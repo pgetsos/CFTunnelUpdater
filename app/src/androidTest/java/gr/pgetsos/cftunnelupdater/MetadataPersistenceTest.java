@@ -36,4 +36,26 @@ public class MetadataPersistenceTest {
         assertEquals("",second.getOwnedAutoIp());assertTrue(new IpMetadataStore(context).all().isEmpty());
         assertEquals("192.0.2.3/32",first.getOwnedAutoIp());
     }
+    @Test public void replacementKeepsDetailsAndQueuesBothSidesAcrossRecreation() {
+        IpMetadataStore store=new IpMetadataStore(context);
+        Long expiry=System.currentTimeMillis()+60000;
+        store.saveLocal("192.0.2.1","Home",expiry,true);
+        Long added=store.get("192.0.2.1").addedAt;
+        store.saveLocal("192.0.2.2","Stale destination",null,true);
+        store.deleted("192.0.2.2");
+        store.replaceLocal("192.0.2.1/32","192.0.2.2","Renamed home",expiry);
+        IpMetadataStore reopened=new IpMetadataStore(context);
+        IpRecord moved=reopened.get("192.0.2.2/32"),removed=reopened.get("192.0.2.1");
+        assertEquals("Renamed home",moved.name);assertEquals(added,moved.addedAt);assertEquals(expiry,moved.expiresAt);
+        assertFalse(moved.deleted);assertTrue(moved.pending);
+        assertTrue(removed.deleted);assertTrue(removed.pending);assertEquals("",removed.name);assertNull(removed.expiresAt);
+    }
+    @Test public void replacementPreservesUnknownDateAndRejectsSameAddress() {
+        IpMetadataStore store=new IpMetadataStore(context);
+        store.saveLocal("192.0.2.1","Existing",null,false);
+        store.replaceLocal("192.0.2.1","192.0.2.2","Existing",null);
+        assertNull(store.get("192.0.2.2").addedAt);
+        assertThrows(IllegalArgumentException.class,()->store.replaceLocal("192.0.2.2","192.0.2.2/32","Changed",null));
+        assertEquals("Existing",store.get("192.0.2.2").name);
+    }
 }

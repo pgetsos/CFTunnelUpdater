@@ -71,4 +71,23 @@ public class AccessService {
             return removed;
         }
     }
+    public boolean replace(String previousIp, String currentIp) throws IOException {
+        String replacement = IpNameKey.of(currentIp);
+        synchronized (MUTATION_LOCK) {
+            JsonObject group = read(); JsonArray rules = includes(group);
+            boolean found = false;
+            for (JsonElement rule : rules) if (same(ip(rule), previousIp)) found = true;
+            if (!found) throw new IOException("This saved IP is no longer in the group. Refresh the list and try again.");
+            if (same(previousIp, replacement)) return false;
+            for (JsonElement rule : rules) if (same(ip(rule), replacement))
+                throw new IOException("Your current phone IP is already saved in this group. Both entries were kept.");
+            JsonArray updated = new JsonArray(); boolean inserted = false;
+            for (JsonElement rule : rules) {
+                if (same(ip(rule), previousIp)) {
+                    if (!inserted) { updated.add(rule(replacement)); inserted = true; }
+                } else updated.add(rule);
+            }
+            group.add("include", updated); write(group); return true;
+        }
+    }
 }

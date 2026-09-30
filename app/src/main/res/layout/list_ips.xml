@@ -16,7 +16,7 @@
         android:layout_height="wrap_content"
         android:gravity="center"
         android:padding="8dp"
-        android:text="Tap an IP to name it. Hold to delete." />
+        android:text="@string/saved_ip_hint" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/ips_recycler"

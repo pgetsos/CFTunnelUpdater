@@ -1,3 +1,7 @@
+# Unreleased
+
+- Tap a saved IP and choose Use current phone IP to replace that specific address while keeping its name, original added date and expiry. Confirm the old and new addresses before updating. Existing destination entries are kept intact.
+
 # 0.7.2
 
 The main features introduced in 0.7.0 are included in this release:

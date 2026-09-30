@@ -61,6 +61,21 @@ public class IpMetadataStore {
             r.updatedAt = System.currentTimeMillis(); r.pending = true; put(ip, r);
         }
     }
+    /** Move a saved entry's details and queue both sides for shared synchronization. */
+    public void replaceLocal(String previousIp, String currentIp, String name, Long expiry) {
+        String previous = IpNameKey.of(previousIp), current = IpNameKey.of(currentIp);
+        if (previous.equals(current)) throw new IllegalArgumentException("The IP has not changed.");
+        String trimmedName = name.trim();
+        if (trimmedName.length() > 100) throw new IllegalArgumentException("Names can contain up to 100 characters.");
+        synchronized (LOCK) {
+            IpRecord replacement = get(previous);
+            replacement.name = trimmedName; replacement.expiresAt = expiry; replacement.deleted = false;
+            replacement.updatedAt = System.currentTimeMillis(); replacement.pending = true;
+            IpRecord removed = new IpRecord(); removed.deleted = true;
+            removed.updatedAt = replacement.updatedAt; removed.pending = true;
+            prefs.edit().putString(previous, gson.toJson(removed)).putString(current, gson.toJson(replacement)).commit();
+        }
+    }
     private JsonElement request(String route, String ip, IpRecord record) throws IOException {
         HttpUrl parsed = HttpUrl.parse(base);
         if (parsed == null || !parsed.isHttps() || secret.isEmpty()) throw new IOException("Set an HTTPS Worker URL and API key.");

@@ -18,4 +18,14 @@
     <string name="failed_to_fetch_public_ip">Failed to fetch IP</string>
     <string name="dark_theme">Dark theme</string>
     <string name="theme_hint">Use dark colors on every screen. Tap Save to apply.</string>
+    <string name="saved_ip_hint">Tap an IP to edit it or use your current phone IP. Hold to delete.</string>
+    <string name="use_current_phone_ip">Use current phone IP</string>
+    <string name="update_saved_ip">Update saved IP?</string>
+    <string name="confirm_update_saved_ip">Replace %1$s with %2$s?\n\nThe name and expiry shown here and the original added date will be kept. The old IP will lose access.</string>
+    <string name="updating_saved_ip">Updating saved IP…</string>
+    <string name="saved_ip_updated">Saved IP updated.</string>
+    <string name="saved_ip_already_current">This saved IP already matches your current phone IP.</string>
+    <string name="saved_ip_lookup_failed">Could not get your current phone IP: %1$s</string>
+    <string name="saved_ip_update_failed">Could not update saved IP: %1$s</string>
+    <string name="saved_ip_sync_pending">IP updated. Details saved on this phone; shared sync will retry.</string>
 </resources>
